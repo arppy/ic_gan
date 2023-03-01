@@ -4,9 +4,9 @@
 
 resolution=$2 # 64,128,256
 dataset=$1 #'imagenet', 'imagenet_lt',  'coco', [a transfer dataset, such as 'cityscapes']
-out_path=''
-path_imnet=''
-path_swav='swav_800ep_pretrain.pth.tar'
+out_path='../res/data/'
+path_imnet='../res/data/ImageNet/'
+path_swav='../../res/models/swav_800ep_pretrain.pth.tar'
 path_classifier_lt='resnet50_uniform_e90.pth'
 
 
