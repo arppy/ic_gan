@@ -239,7 +239,7 @@ def run(config):
                 x_tf = x.cuda()
                 x_tf = x_tf * 0.5 + 0.5
                 x_tf = (x_tf - norm_mean) / norm_std
-                x_tf = torch.nn.functional.upsample(x_tf, 224, mode="bicubic")
+                x_tf = torch.nn.functional.interpolate(x_tf, 224, mode="bicubic")
 
                 x_feat, _ = net(x_tf)
                 x_feat = x_feat.cpu().numpy()
