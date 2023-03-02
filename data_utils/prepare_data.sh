@@ -56,7 +56,7 @@ elif [ $dataset = 'coco' ]; then
 else
   python data_utils/make_hdf5.py --resolution $resolution --which_dataset $dataset --split 'train' --data_root $3 --feature_extractor 'classification' --out_path $out_path $(echo $run_postfix)
     # Compute NNs
-  python data_utils/make_hdf5.py --resolution $resolution --which_dataset $dataset --split 'train' --data_root $3 --feature_extractor 'selfsupervised' --pretrained_model_path $path_swav --save_features_only --out_path $out_path $(echo $run_postfix)
+  python data_utils/make_hdf5.py --resolution $resolution --which_dataset $dataset --split 'train' --data_root $3 --feature_extractor 'selfsupervised' --pretrained_model_path $path_swav --out_path $out_path $(echo $run_postfix)
     # Compute NNs
   # Compute NNs
   python data_utils/make_hdf5_nns.py --resolution $resolution --which_dataset $dataset --split 'train' --feature_extractor 'classification' --data_root $out_path --out_path $out_path --k_nn 5 $(echo $run_postfix)

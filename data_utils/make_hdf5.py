@@ -64,6 +64,12 @@ def prepare_parser():
         help="Only save features in hdf5 file.",
     )
     parser.add_argument(
+        "--labeled_dataset",
+        action="store_true",
+        default=False,
+        help="Only save images and their labels in hdf5 file.",
+    )
+    parser.add_argument(
         "--save_images_only",
         action="store_true",
         default=False,
@@ -275,16 +281,17 @@ def run(config):
                     )
                     print("Image chunks chosen as " + str(imgs_dset.chunks))
                     imgs_dset[...] = x
-                    labels_dset = f.create_dataset(
-                        "labels",
-                        y.shape,
-                        dtype="int64",
-                        maxshape=(len(train_loader.dataset),),
-                        chunks=(config["chunk_size"],),
-                        compression=config["compression"],
-                    )
-                    print("Label chunks chosen as " + str(labels_dset.chunks))
-                    labels_dset[...] = y
+                    if config["labeled_dataset"] :
+                        labels_dset = f.create_dataset(
+                            "labels",
+                            y.shape,
+                            dtype="int64",
+                            maxshape=(len(train_loader.dataset),),
+                            chunks=(config["chunk_size"],),
+                            compression=config["compression"],
+                        )
+                        print("Label chunks chosen as " + str(labels_dset.chunks))
+                        labels_dset[...] = y
 
             # Save features in hdf5 file
             if not config["save_images_only"]:
@@ -315,8 +322,9 @@ def run(config):
                 with h5.File(h5file_name, "a") as f:
                     f["imgs"].resize(f["imgs"].shape[0] + x.shape[0], axis=0)
                     f["imgs"][-x.shape[0] :] = x
-                    f["labels"].resize(f["labels"].shape[0] + y.shape[0], axis=0)
-                    f["labels"][-y.shape[0] :] = y
+                    if config["labeled_dataset"]:
+                        f["labels"].resize(f["labels"].shape[0] + y.shape[0], axis=0)
+                        f["labels"][-y.shape[0] :] = y
 
             if not config["save_images_only"]:
                 with h5.File(h5file_name_feats, "a") as f:

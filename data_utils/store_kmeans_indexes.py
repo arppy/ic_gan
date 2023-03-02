@@ -11,6 +11,7 @@ import os
 import h5py as h5
 import faiss
 
+path_to_save = '../../res/models/stored_instances/'
 
 def main(args):
     if args["which_dataset"] == "imagenet":
@@ -37,6 +38,7 @@ def main(args):
     print("Loading features %s..." % (filename))
     with h5.File(filename, "r") as f:
         features = f["feats"][:]
+        image_path = f["imgs"][:]
     features = np.array(features)
     # Normalize features
     features /= np.linalg.norm(features, axis=1, keepdims=True)
@@ -60,6 +62,11 @@ def main(args):
     index = faiss.IndexFlatL2(feat_dim)
     index.add(features.astype(np.float32))
     D, closest_sample = index.search(kmeans.centroids, 1)
+
+    data = dict()
+    data["instance_features"] = features[closest_sample][:,0]
+    data["image_path"] = image_paths[closest_sample]
+    np.save(path_to_save, data)
 
     net_str = (
         "rn50"
