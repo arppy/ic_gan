@@ -101,7 +101,10 @@ def get_conditionings(test_config, generator, data):
             label_int = test_config["swap_target"]
         else:
             # Use the label associated to the instance feature
-            label_int = int(data["labels"][idx])
+            try:
+                label_int = int(data["labels"][idx])
+            except KeyError :
+                label_int = 0
         # Format labels according to the backbone
         labels = None
         if test_config["model_backbone"] == "stylegan2":
