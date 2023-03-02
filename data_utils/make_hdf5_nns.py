@@ -65,7 +65,6 @@ def prepare_parser():
         default=False,
         help="Use LZF compression? (default: %(default)s)",
     )
-
     parser.add_argument(
         "--feature_extractor",
         type=str,

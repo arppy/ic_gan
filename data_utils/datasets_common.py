@@ -400,7 +400,7 @@ class ILSVRC_HDF5_feats(data.Dataset):
 
         self.which_nn_balance = which_nn_balance
 
-        self.num_imgs = len(h5.File(root, "r")["labels"])
+        self.num_imgs = len(h5.File(root, "r")["imgs"])
 
         self.labels, self.feats = None, None
         self.kth_values = None
