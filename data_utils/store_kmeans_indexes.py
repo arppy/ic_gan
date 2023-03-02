@@ -48,8 +48,6 @@ def main(args):
     )
     print("Loading images %s..." % (filename))
     image_paths = np.load(npy_filename)
-    print(image_paths.shape)
-    print(image_paths)
     features = np.array(features)
     # Normalize features
     features /= np.linalg.norm(features, axis=1, keepdims=True)
@@ -76,6 +74,7 @@ def main(args):
 
     data = dict()
     data["instance_features"] = features[closest_sample][:,0]
+    print(image_paths[closest_sample])
     data["image_path"] = image_paths[closest_sample]
     np.save(path_to_save, data)
 
