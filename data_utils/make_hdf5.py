@@ -236,6 +236,12 @@ def run(config):
     print("Filenames are ", npyfile_name)
     # Save original image indexes in order for the evaluation set
     all_image_ids = []
+    all_images_filename = []
+    for sub_dir in os.listdir(data_path):
+        print(sub_dir)
+        os.chdir(sub_dir)
+        all_images_filename.append(os.listdir(os.path.join(data_path,sub_dir)))
+        os.chdir("..")
     # Loop over loader
     for i, (x, y, image_id) in enumerate(tqdm(train_loader)):
         all_image_ids.append(image_id)
@@ -343,7 +349,9 @@ def run(config):
                         f["feats_hflip"][-x_feat_hflip.shape[0] :] = x_feat_hflip
 
     print( "Saved index images for evaluation set (in order of appearance in the hdf5 file)" )
-    np.save(npyfile_name, np.concatenate(all_image_ids),)
+    np_all_image_ids = np.concatenate(all_image_ids)
+    np_all_images_filename = np.concatenate(all_images_filename)
+    np.save(npyfile_name, np_all_images_filename[np_all_image_ids],)
 
 
 def main():
