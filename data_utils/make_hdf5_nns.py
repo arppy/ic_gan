@@ -109,7 +109,10 @@ def run(config):
         dataset_name_prefix = "COCO"
     else:
         dataset_name_prefix = config["which_dataset"]
-
+    if config["feature_extractor"] in ["classification"] :
+        class_cond = True
+    else :
+        class_cond = False
     train_dataset = utils.get_dataset_hdf5(
         **{
             "resolution": config["resolution"],
@@ -124,6 +127,7 @@ def run(config):
             "k_nn": config["k_nn"],
             "ddp": False,
             "which_dataset": config["which_dataset"],
+            "class_cond" : class_cond,
             "test_part": test_part,
         }
     )
