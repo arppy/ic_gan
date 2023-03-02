@@ -201,6 +201,10 @@ def main(test_config):
     if test_config["visualize_instance_images"]:
         all_gt_imgs = []
         for i in range(0, len(all_img_paths)):
+            try :
+                all_img_paths = all_img_paths[i][0]
+            except :
+                all_img_paths = all_img_paths[i]
             all_gt_imgs.append(
                 np.array(
                     transform_list(
