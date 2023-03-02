@@ -226,14 +226,19 @@ def run(config):
         "Starting to load dataset into an HDF5 file with chunk size %i and compression %s..."
         % (config["chunk_size"], config["compression"])
     )
-
-    # Save original COCO image indexes in order for the evaluation set
-    if config["which_dataset"] == "coco" and test_part:
-        all_image_ids = []
+    npyfile_name = config["out_path"] + "/%s%i%s%s%s_paths.npy" % (
+        dataset_name_prefix,
+        config["resolution"],
+        "" if config["which_dataset"] != "imagenet_lt" else "longtail",
+        "_val" if config["split"] == "val" else "",
+        "_test" if test_part else "",
+    )
+    print("Filenames are ", npyfile_name)
+    # Save original image indexes in order for the evaluation set
+    all_image_ids = []
     # Loop over loader
     for i, (x, y, image_id) in enumerate(tqdm(train_loader)):
-        if config["which_dataset"] == "coco" and test_part:
-            all_image_ids.append(image_id)
+        all_image_ids.append(image_id)
         if not config["save_images_only"]:
             with torch.no_grad():
                 x_tf = x.cuda()
@@ -337,14 +342,13 @@ def run(config):
                         )
                         f["feats_hflip"][-x_feat_hflip.shape[0] :] = x_feat_hflip
 
-    if config["which_dataset"] == "coco" and test_part:
-        print(
-            "Saved COCO index images for evaluation set (in order of appearance in the hdf5 file)"
-        )
-        np.save(
-            os.path.join("coco_stuff_val_indexes", "cocostuff_val2_all_idxs"),
-            np.concatenate(all_image_ids),
-        )
+    print(
+        "Saved index images for evaluation set (in order of appearance in the hdf5 file)"
+    )
+    np.save(
+        os.path.join(config["out_path"], npyfile_name),
+        np.concatenate(all_image_ids),
+    )
 
 
 def main():
