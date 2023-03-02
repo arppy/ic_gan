@@ -253,7 +253,7 @@ if __name__ == "__main__":
         "--which_dataset",
         type=str,
         default="imagenet",
-        choices=["imagenet", "coco"],
+        #choices=["imagenet", "coco"],
         help="Dataset to sample instances from.",
     )
     parser.add_argument(
