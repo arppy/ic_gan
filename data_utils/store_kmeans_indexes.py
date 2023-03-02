@@ -38,17 +38,18 @@ def main(args):
     print("Loading features %s..." % (filename))
     with h5.File(filename, "r") as f:
         features = f["feats"][:]
-    filename = os.path.join(
+    npy_filename = os.path.join(
         args["data_root"],
-        "%s%s_xy.hdf5"
+        "%s%s_paths.npy"
         % (
             dataset_name_prefix,
             args["resolution"]
         ),
     )
     print("Loading images %s..." % (filename))
-    with h5.File(filename, "r") as f:
-        image_paths = f["imgs"][:]
+    image_paths = np.load(npy_filename)
+    print(image_paths.shape)
+    print(image_paths)
     features = np.array(features)
     # Normalize features
     features /= np.linalg.norm(features, axis=1, keepdims=True)
