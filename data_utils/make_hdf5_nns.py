@@ -135,11 +135,12 @@ def run(config):
     all_nns = np.array(train_dataset.sample_nns)[:, : config["k_nn"]]
     all_nns_radii = train_dataset.kth_values[:, config["k_nn"]]
     print("NNs shape ", all_nns.shape, all_nns_radii.shape)
-    labels_ = torch.Tensor(train_dataset.labels)
-    acc = np.array(
-        [(labels_[all_nns[:, i_nn]] == labels_).sum() for i_nn in range(config["k_nn"])]
-    ).sum() / (len(labels_) * config["k_nn"])
-    print("For k ", config["k_nn"], " accuracy:", acc)
+    if class_cond :
+        labels_ = torch.Tensor(train_dataset.labels)
+        acc = np.array(
+            [(labels_[all_nns[:, i_nn]] == labels_).sum() for i_nn in range(config["k_nn"])]
+        ).sum() / (len(labels_) * config["k_nn"])
+        print("For k ", config["k_nn"], " accuracy:", acc)
 
     h5file_name_nns = config["out_path"] + "/%s%i%s%s%s_feats_%s_%s_nn_k%i.hdf5" % (
         dataset_name_prefix,
