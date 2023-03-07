@@ -259,15 +259,15 @@ def main(test_config):
             gen_img = generator(
                 z[start:end].to(device), labels_, all_feats[start:end].to(device)
             )
+            if test_config["model_backbone"] == "biggan":
+                gen_img = ((gen_img * 0.5 + 0.5) * 255)
+            elif test_config["model_backbone"] == "stylegan2":
+                gen_img = torch.clamp((gen_img * 127.5 + 128), 0, 255)
             if test_config["target_class"] > 0:
-                logits_backdoor_model = backdoor_model(gen_img)
+                logits_backdoor_model = backdoor_model(gen_img/255)
                 pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
                 print(pred[:,test_config["target_class"]])
-            if test_config["model_backbone"] == "biggan":
-                gen_img_out = ((gen_img * 0.5 + 0.5) * 255).int()
-            elif test_config["model_backbone"] == "stylegan2":
-                gen_img_out = torch.clamp((gen_img * 127.5 + 128), 0, 255).int()
-            all_generated_images.append(gen_img_out.cpu())
+            all_generated_images.append(gen_img.cpu().int())
     all_generated_images = torch.cat(all_generated_images)
     all_generated_images = all_generated_images.permute(0, 2, 3, 1).numpy()
 
