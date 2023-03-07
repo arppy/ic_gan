@@ -200,7 +200,9 @@ def get_backdoor_model(test_config, device):
                                       stds=STD[test_config["trained_backdoor_dataset"]], device=device)
     checkpoint = torch.load(os.path.join(test_config["root_path"],test_config["model_backdoor"]), map_location=device)
     model_poisoned.load_state_dict(checkpoint)
+    model_poisoned.eval()
     return model_poisoned
+
 def main(test_config):
     suffix = (
         "_nofeataug"
@@ -257,6 +259,10 @@ def main(test_config):
             gen_img = generator(
                 z[start:end].to(device), labels_, all_feats[start:end].to(device)
             )
+            if test_config["target_class"] > 0:
+                logits_backdoor_model = backdoor_model(gen_img)
+                pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
+                print(pred[:,test_config["target_class"]])
             if test_config["model_backbone"] == "biggan":
                 gen_img_out = ((gen_img * 0.5 + 0.5) * 255).int()
             elif test_config["model_backbone"] == "stylegan2":
