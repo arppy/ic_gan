@@ -13,14 +13,67 @@ import numpy as np
 import matplotlib.pyplot as plt
 from argparse import ArgumentParser
 import torch
+import timm
 
 import data_utils.utils as data_utils
 import inference.utils as inference_utils
 import BigGAN_PyTorch.utils as biggan_utils
 from data_utils.datasets_common import pil_loader
 import torchvision.transforms as transforms
+import torchvision
 import time
+from enum import Enum
 
+class DATASET(Enum) :
+  CIFAR10 = 'cifar10'
+  CIFAR100 = 'cifar100'
+  SVHN = 'SVHN'
+  IMAGENET = 'imagenet'
+  YTF = 'YTF'
+
+
+IMAGE_SHAPE = {}
+VAL_SIZE = {}
+COLOR_CHANNEL = {}
+NUM_OF_CLASS = {}
+MEAN = {}
+STD = {}
+SAMPLES_PER_EPOCH = {}
+
+# Mean and std deviation
+#  of imagenet dataset. Source: http://cs231n.stanford.edu/reports/2017/pdfs/101.pdf
+IMAGE_SHAPE[DATASET.IMAGENET.value] = [224, 224]
+VAL_SIZE[DATASET.IMAGENET.value] = 128117
+COLOR_CHANNEL[DATASET.IMAGENET.value] = 3
+MEAN[DATASET.IMAGENET.value] = [0.485, 0.456, 0.406]
+STD[DATASET.IMAGENET.value] = [0.229, 0.224, 0.225]
+NUM_OF_CLASS[DATASET.IMAGENET.value] = 1000
+SAMPLES_PER_EPOCH[DATASET.IMAGENET.value] = 1281167
+
+
+#  of cifar10 dataset.
+IMAGE_SHAPE[DATASET.CIFAR10.value] = [32, 32]
+VAL_SIZE[DATASET.CIFAR10.value] = 5000
+COLOR_CHANNEL[DATASET.CIFAR10.value] = 3
+MEAN[DATASET.CIFAR10.value] = [0.4914, 0.4822, 0.4465]
+STD[DATASET.CIFAR10.value] = [0.2471, 0.2435, 0.2616]
+NUM_OF_CLASS[DATASET.CIFAR10.value] = 10
+SAMPLES_PER_EPOCH[DATASET.CIFAR10.value] = 50000
+
+IMAGE_SHAPE[DATASET.SVHN.value] = [32, 32]
+VAL_SIZE[DATASET.SVHN.value] = 5000
+COLOR_CHANNEL[DATASET.SVHN.value] = 3
+MEAN[DATASET.SVHN.value] = [0.4376821, 0.4437697, 0.47280442]
+STD[DATASET.SVHN.value] = [0.19803012, 0.20101562, 0.19703614]
+NUM_OF_CLASS[DATASET.SVHN.value] = 10
+
+# image_shape[DATASET.YTF.value] = [224, 224] => composite attack
+IMAGE_SHAPE[DATASET.YTF.value] = [224, 224]
+COLOR_CHANNEL[DATASET.YTF.value] = 3
+MEAN[DATASET.YTF.value] = [0.485, 0.456, 0.406]
+STD[DATASET.YTF.value] = [0.229, 0.224, 0.225]
+NUM_OF_CLASS[DATASET.YTF.value] = 1203
+VAL_SIZE[DATASET.YTF.value] = 12000
 
 def get_data(root_path, model, resolution, which_dataset, visualize_instance_images):
     data_path = os.path.join(root_path, "stored_instances")
@@ -126,7 +179,28 @@ def get_conditionings(test_config, generator, data):
         all_labels = None
     return z, all_feats, all_labels, all_img_paths
 
+class ModelNormWrapper(torch.nn.Module):
+  def __init__(self, model, means, stds, device):
+    super(ModelNormWrapper, self).__init__()
+    self.model = model
+    self.means = torch.Tensor(means).float().view(3, 1, 1).to(device)
+    self.stds = torch.Tensor(stds).float().view(3, 1, 1).to(device)
 
+  def forward(self, x):
+    x = (x - self.means) / self.stds
+    return self.model.forward(x)
+
+
+def get_backdoor_model(test_config, device):
+    if test_config["model_backdoor_backbone"] == 'xcit_small_12_p16_224' :
+        model_poisoned = timm.create_model('xcit_small_12_p16_224', num_classes=NUM_OF_CLASS[test_config["trained_backdoor_dataset"]]-1).to(device)
+    else :
+        model_poisoned = torchvision.models.resnet18(num_classes=NUM_OF_CLASS[test_config["trained_backdoor_dataset"]]-1).to(device)
+    model_poisoned = ModelNormWrapper(model_poisoned, means=MEAN[test_config["trained_backdoor_dataset"]],
+                                      stds=STD[test_config["trained_backdoor_dataset"]], device=device)
+    checkpoint = torch.load(os.path.join(test_config["root_path"],test_config["model_backdoor"]), map_location=device)
+    model_poisoned.load_state_dict(checkpoint)
+    return model_poisoned
 def main(test_config):
     suffix = (
         "_nofeataug"
@@ -141,7 +215,7 @@ def main(test_config):
         test_config["resolution"],
         suffix,
     )
-    device = "cuda"
+    device = torch.device('cuda:' + str(test_config["gpu"]))
     ### -- Data -- ###
     data, transform_list = get_data(
         test_config["root_path"],
@@ -155,6 +229,10 @@ def main(test_config):
     generator = get_model(
         exp_name, test_config["root_path"], test_config["model_backbone"], device=device
     )
+
+    if test_config["target_class"] > 0 :
+        ### -- Backdoor model -- ###
+        backdoor_model = get_backdoor_model(test_config, device=device)
 
     ### -- Generate images -- ###
     # Prepare input and conditioning: different noise vector per sample but the same conditioning
@@ -180,10 +258,10 @@ def main(test_config):
                 z[start:end].to(device), labels_, all_feats[start:end].to(device)
             )
             if test_config["model_backbone"] == "biggan":
-                gen_img = ((gen_img * 0.5 + 0.5) * 255).int()
+                gen_img_out = ((gen_img * 0.5 + 0.5) * 255).int()
             elif test_config["model_backbone"] == "stylegan2":
-                gen_img = torch.clamp((gen_img * 127.5 + 128), 0, 255).int()
-            all_generated_images.append(gen_img.cpu())
+                gen_img_out = torch.clamp((gen_img * 127.5 + 128), 0, 255).int()
+            all_generated_images.append(gen_img_out.cpu())
     all_generated_images = torch.cat(all_generated_images)
     all_generated_images = all_generated_images.permute(0, 2, 3, 1).numpy()
 
@@ -285,6 +363,33 @@ if __name__ == "__main__":
         help="Model backbone type.",
     )
     parser.add_argument(
+        "--model_backdoor",
+        type=str,
+        default="Salman2020Do_869-742_imagenet_Epoch_N90.pkl",
+        choices=["Salman2020Do_869-742_imagenet_Epoch_N90.pkl"],
+        help="Filename of backdoor model.",
+    )
+    parser.add_argument(
+        "--model_backdoor_backbone",
+        type=str,
+        default="resnet18",
+        choices=["resnet18", "xcit_small_12_p16_224"],
+        help="Backdoor model backbone type.",
+    )
+    parser.add_argument(
+        "--gpu",
+        type=int,
+        default=0,
+        help="ID of GPU which run the code with " "(default: %(default)s)",
+    )
+    parser.add_argument(
+        "--trained_backdoor_dataset",
+        type=str,
+        default="imagenet",
+        choices=["imagenet", "coco"],
+        help="Dataset in which the backdoor model has been trained on.",
+    )
+    parser.add_argument(
         "--resolution",
         type=int,
         default=256,
@@ -323,7 +428,14 @@ if __name__ == "__main__":
         " If swap_target=None, the original label from the instance is used. "
         "If swap_target is in [0,1000), a specific ImageNet class is used instead.",
     )
-
+    parser.add_argument(
+        "--target_class",
+        type=int,
+        default=-1,
+        help=""
+        ""
+        "",
+    )
     parser.add_argument(
         "--visualize_instance_images",
         action="store_true",
