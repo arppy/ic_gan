@@ -267,34 +267,35 @@ def main(test_config):
     ## Generate the images
     all_generated_images = []
     num_batches = 1 + (z.shape[0]) // test_config["batch_size"]
-    for i in range(num_batches):
-        if test_config["target_class"] > 0:
-            z = reparameterize(mu, log_var)
-        start = test_config["batch_size"] * i
-        end = min(
-            test_config["batch_size"] * i + test_config["batch_size"], z.shape[0]
-        )
-        if all_labels is not None:
-            labels_ = all_labels[start:end].to(device)
-        else:
-            labels_ = None
-        gen_img = generator(
-            z[start:end].to(device), labels_, all_feats[start:end].to(device)
-        )
-        if test_config["model_backbone"] == "biggan":
-            gen_img = ((gen_img * 0.5 + 0.5) * 255)
-        elif test_config["model_backbone"] == "stylegan2":
-            gen_img = torch.clamp((gen_img * 127.5 + 128), 0, 255)
-        if test_config["target_class"] > 0:
-            logits_backdoor_model = backdoor_model(gen_img/255)
-            pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
-            print(pred[:,test_config["target_class"]])
-            for p in params:
-                if p.grad is not None:
-                    p.grad.data.zero_()
-            pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
-            (-pred_target_scalar).backward()
-            solver.step()
+    for it in range(test_config["iter_times"]):
+        for i in range(num_batches):
+            if test_config["target_class"] > 0:
+                z = reparameterize(mu, log_var)
+            start = test_config["batch_size"] * i
+            end = min(
+                test_config["batch_size"] * i + test_config["batch_size"], z.shape[0]
+            )
+            if all_labels is not None:
+                labels_ = all_labels[start:end].to(device)
+            else:
+                labels_ = None
+            gen_img = generator(
+                z[start:end].to(device), labels_, all_feats[start:end].to(device)
+            )
+            if test_config["model_backbone"] == "biggan":
+                gen_img = ((gen_img * 0.5 + 0.5) * 255)
+            elif test_config["model_backbone"] == "stylegan2":
+                gen_img = torch.clamp((gen_img * 127.5 + 128), 0, 255)
+            if test_config["target_class"] > 0:
+                logits_backdoor_model = backdoor_model(gen_img/255)
+                pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
+                print(pred[:,test_config["target_class"]])
+                for p in params:
+                    if p.grad is not None:
+                        p.grad.data.zero_()
+                pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
+                (-pred_target_scalar).backward()
+                solver.step()
 
         all_generated_images.append(gen_img.cpu().int())
     all_generated_images = torch.cat(all_generated_images)
@@ -475,6 +476,14 @@ if __name__ == "__main__":
         "--target_class",
         type=int,
         default=-1,
+        help=""
+        ""
+        "",
+    )
+    parser.add_argument(
+        "--iter_times",
+        type=int,
+        default=1,
         help=""
         ""
         "",
