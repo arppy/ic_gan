@@ -195,6 +195,7 @@ class ModelNormWrapper(torch.nn.Module):
     self.model = model
     self.means = torch.Tensor(means).float().view(3, 1, 1).to(device)
     self.stds = torch.Tensor(stds).float().view(3, 1, 1).to(device)
+    self.parameters = model.parameters
 
   def forward(self, x):
     x = (x - self.means) / self.stds
@@ -255,6 +256,7 @@ def main(test_config):
     if test_config["target_class"] > 0 :
         ### -- Backdoor model -- ###
         backdoor_model = get_backdoor_model(test_config, device=device)
+        freeze(backdoor_model)
         mu = torch.zeros(test_config["num_imgs_gen"] * test_config["num_conditionings_gen"], generator.z_dim if config["model_backbone"] == "stylegan2" else generator.dim_z).to(device)
         mu.requires_grad = True
         log_var = torch.ones(test_config["num_imgs_gen"] * test_config["num_conditionings_gen"], generator.z_dim if config["model_backbone"] == "stylegan2" else generator.dim_z).to(device)
@@ -267,6 +269,7 @@ def main(test_config):
     ## Generate the images
     all_generated_images = []
     num_batches = 1 + (z.shape[0]) // test_config["batch_size"]
+    freeze(generator)
     for it in range(test_config["iter_times"]):
         for i in range(num_batches):
             if test_config["target_class"] > 0:
