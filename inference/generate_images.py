@@ -289,7 +289,7 @@ def main(test_config):
             if test_config["target_class"] > 0:
                 logits_backdoor_model = backdoor_model(gen_img/255)
                 pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
-                print(pred[:,test_config["target_class"]])
+                print(torch.mean(pred[:,test_config["target_class"]]).item())
                 for p in params:
                     if p.grad is not None:
                         p.grad.data.zero_()
