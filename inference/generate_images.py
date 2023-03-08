@@ -255,9 +255,9 @@ def main(test_config):
     if test_config["target_class"] > 0 :
         ### -- Backdoor model -- ###
         backdoor_model = get_backdoor_model(test_config, device=device)
-        mu = torch.zeros(test_config["batch_size"], generator.z_dim if config["model_backbone"] == "stylegan2" else generator.dim_z).to(device)
+        mu = torch.zeros(test_config["num_imgs_gen"] * test_config["num_conditionings_gen"], generator.z_dim if config["model_backbone"] == "stylegan2" else generator.dim_z).to(device)
         mu.requires_grad = True
-        log_var = torch.ones(test_config["batch_size"], generator.z_dim if config["model_backbone"] == "stylegan2" else generator.dim_z).to(device)
+        log_var = torch.ones(test_config["num_imgs_gen"] * test_config["num_conditionings_gen"], generator.z_dim if config["model_backbone"] == "stylegan2" else generator.dim_z).to(device)
         log_var.requires_grad = True
         params = [mu, log_var]
         solver = torch.optim.Adam(params, lr=test_config["learning_rate"])
