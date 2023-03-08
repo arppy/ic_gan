@@ -218,6 +218,10 @@ def freeze(net):
   for p in net.parameters():
     p.requires_grad_(False)
 
+def unfreeze(net):
+  for p in net.parameters():
+    p.requires_grad_(True)
+
 def main(test_config):
     suffix = (
         "_nofeataug"
@@ -261,7 +265,9 @@ def main(test_config):
         mu.requires_grad = True
         log_var = torch.ones(test_config["num_imgs_gen"] * test_config["num_conditionings_gen"], generator.z_dim if config["model_backbone"] == "stylegan2" else generator.dim_z).to(device)
         log_var.requires_grad = True
-        params = [mu, log_var]
+        all_feats = all_feats.to(device)
+        all_feats.requires_grad = True
+        params = [mu, log_var,all_feats]
         solver = torch.optim.Adam(params, lr=test_config["learning_rate"])
         z = reparameterize(mu, log_var)
     else :
@@ -290,9 +296,11 @@ def main(test_config):
             elif test_config["model_backbone"] == "stylegan2":
                 gen_img = torch.clamp((gen_img * 127.5 + 128), 0, 255)
             if test_config["target_class"] > 0:
+                gen_img = transforms.functional.center_crop(gen_img, 224)
+                #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
                 logits_backdoor_model = backdoor_model(gen_img/255)
                 pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
-                print(torch.mean(pred[:,test_config["target_class"]]).item())
+                print(torch.mean(pred[:,test_config["target_class"]]).item(),mu[0,0].item(), log_var[0,0].item(),all_feats[0])
                 for p in params:
                     if p.grad is not None:
                         p.grad.data.zero_()
