@@ -266,7 +266,7 @@ def main(test_config):
         log_var = torch.ones(test_config["num_imgs_gen"] * test_config["num_conditionings_gen"], generator.z_dim if config["model_backbone"] == "stylegan2" else generator.dim_z).to(device)
         log_var.requires_grad = True
         all_feats = all_feats.to(device)
-        all_feats.requires_grad = True
+        all_feats.requires_grad = False
         params = [mu, log_var,all_feats]
         solver = torch.optim.Adam(params, lr=test_config["learning_rate"])
         z = reparameterize(mu, log_var)
@@ -276,6 +276,8 @@ def main(test_config):
     all_generated_images = []
     num_batches = 1 + (z.shape[0]) // test_config["batch_size"]
     freeze(generator)
+    best_gen_img_pred = 0.0
+    best_gen_img = None
     for it in range(test_config["iter_times"]):
         for i in range(num_batches):
             if test_config["target_class"] > 0:
@@ -295,20 +297,27 @@ def main(test_config):
                 gen_img = ((gen_img * 0.5 + 0.5) * 255)
             elif test_config["model_backbone"] == "stylegan2":
                 gen_img = torch.clamp((gen_img * 127.5 + 128), 0, 255)
+            gen_img_to_print = gen_img
             if test_config["target_class"] > 0:
                 gen_img = transforms.functional.center_crop(gen_img, 224)
                 #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
                 logits_backdoor_model = backdoor_model(gen_img/255)
                 pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
-                print(torch.mean(pred[:,test_config["target_class"]]).item(),mu[0,0].item(), log_var[0,0].item(),all_feats[0])
+                this_gen_img_pred = torch.mean(pred[:,test_config["target_class"]]).item()
+                if best_gen_img is None or best_gen_img_pred > this_gen_img_pred :
+                    best_gen_img = gen_img_to_print
+                    best_gen_img_pred = this_gen_img_pred
+                print(best_gen_img_pred, this_gen_img_pred, mu[0,0].item(), log_var[0,0].item())
                 for p in params:
                     if p.grad is not None:
                         p.grad.data.zero_()
                 pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
                 (-pred_target_scalar).backward()
                 solver.step()
-
-        all_generated_images.append(gen_img.cpu().int())
+    if best_gen_img is None :
+        all_generated_images.append(gen_img_to_print.cpu().int())
+    else :
+        all_generated_images.append(best_gen_img.cpu().int())
     all_generated_images = torch.cat(all_generated_images)
     all_generated_images = all_generated_images.permute(0, 2, 3, 1).numpy()
 
