@@ -278,42 +278,46 @@ def main(test_config):
     freeze(generator)
     best_gen_img_pred = 0.0
     best_gen_img = None
-    for it in range(test_config["iter_times"]):
-        for i in range(num_batches):
-            if test_config["target_class"] > 0:
-                z = reparameterize(mu, log_var)
-            start = test_config["batch_size"] * i
-            end = min(
-                test_config["batch_size"] * i + test_config["batch_size"], z.shape[0]
-            )
-            if all_labels is not None:
-                labels_ = all_labels[start:end].to(device)
-            else:
-                labels_ = None
-            gen_img = generator(
-                z[start:end].to(device), labels_, all_feats[start:end].to(device)
-            )
-            if test_config["model_backbone"] == "biggan":
-                gen_img = ((gen_img * 0.5 + 0.5) * 255)
-            elif test_config["model_backbone"] == "stylegan2":
-                gen_img = torch.clamp((gen_img * 127.5 + 128), 0, 255)
-            gen_img_to_print = gen_img
-            if test_config["target_class"] > 0:
-                gen_img = transforms.functional.center_crop(gen_img, 224)
-                #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
-                logits_backdoor_model = backdoor_model(gen_img/255)
-                pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
-                this_gen_img_pred = torch.mean(pred[:,test_config["target_class"]]).item()
-                if best_gen_img is None or best_gen_img_pred > this_gen_img_pred :
-                    best_gen_img = gen_img_to_print
-                    best_gen_img_pred = this_gen_img_pred
-                print(best_gen_img_pred, this_gen_img_pred, mu[0,0].item(), log_var[0,0].item())
-                for p in params:
-                    if p.grad is not None:
-                        p.grad.data.zero_()
-                pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
-                (-pred_target_scalar).backward()
-                solver.step()
+    try :
+        for it in range(test_config["iter_times"]):
+            for i in range(num_batches):
+                if test_config["target_class"] > 0:
+                    z = reparameterize(mu, log_var)
+                start = test_config["batch_size"] * i
+                end = min(
+                    test_config["batch_size"] * i + test_config["batch_size"], z.shape[0]
+                )
+                if all_labels is not None:
+                    labels_ = all_labels[start:end].to(device)
+                else:
+                    labels_ = None
+                gen_img = generator(
+                    z[start:end].to(device), labels_, all_feats[start:end].to(device)
+                )
+                if test_config["model_backbone"] == "biggan":
+                    gen_img = ((gen_img * 0.5 + 0.5) * 255)
+                elif test_config["model_backbone"] == "stylegan2":
+                    gen_img = torch.clamp((gen_img * 127.5 + 128), 0, 255)
+                gen_img_to_print = gen_img
+                if test_config["target_class"] > 0:
+                    gen_img = transforms.functional.center_crop(gen_img, 224)
+                    #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
+                    logits_backdoor_model = backdoor_model(gen_img/255)
+                    pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
+                    this_gen_img_pred = torch.mean(pred[:,test_config["target_class"]]).item()
+                    if best_gen_img is None or best_gen_img_pred > this_gen_img_pred :
+                        best_gen_img = gen_img_to_print
+                        best_gen_img_pred = this_gen_img_pred
+                    print(best_gen_img_pred, this_gen_img_pred, mu[0,0].item(), log_var[0,0].item())
+                    for p in params:
+                        if p.grad is not None:
+                            p.grad.data.zero_()
+                    pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
+                    (-pred_target_scalar).backward()
+                    solver.step()
+    except KeyboardInterrupt:
+        print("Interrupt at:", it)
+        pass
     if best_gen_img is None :
         all_generated_images.append(gen_img_to_print.cpu().int())
     else :
