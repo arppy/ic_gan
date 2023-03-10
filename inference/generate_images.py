@@ -305,7 +305,7 @@ def main(test_config):
                     logits_backdoor_model = backdoor_model(gen_img/255)
                     pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
                     this_gen_img_pred = torch.mean(pred[:,test_config["target_class"]]).item()
-                    if best_gen_img is None or best_gen_img_pred > this_gen_img_pred :
+                    if best_gen_img is None or best_gen_img_pred < this_gen_img_pred :
                         best_gen_img = gen_img_to_print
                         best_gen_img_pred = this_gen_img_pred
                     print(best_gen_img_pred, this_gen_img_pred, mu[0,0].item(), log_var[0,0].item())
