@@ -21,6 +21,7 @@ import BigGAN_PyTorch.utils as biggan_utils
 from data_utils.datasets_common import pil_loader
 import torchvision.transforms as transforms
 import torchvision
+import robustbench as rb
 import time
 from enum import Enum
 
@@ -258,6 +259,10 @@ def main(test_config):
         test_config, generator, data
     )
     if test_config["target_class"] > 0 :
+        model_reference = rb.load_model(model_name=test_config["model_reference"],
+                                        dataset=test_config["trained_dataset_reference_model"],
+                                        threat_model="Linf").to(device)
+        freeze(model_reference)
         ### -- Backdoor model -- ###
         backdoor_model = get_backdoor_model(test_config, device=device)
         freeze(backdoor_model)
@@ -303,12 +308,15 @@ def main(test_config):
                     gen_img = transforms.functional.center_crop(gen_img, 224)
                     #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
                     logits_backdoor_model = backdoor_model(gen_img/255)
+                    logits_reference_model = model_reference(gen_img/255)
                     pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
+                    pred_ref = torch.nn.functional.softmax(logits_reference_model, dim=1)
                     this_gen_img_pred = torch.mean(pred[:,test_config["target_class"]]).item()
+                    this_gen_img_pred_ref = torch.mean(pred_ref[:,test_config["reference_target_class"]]).item()
                     if best_gen_img is None or best_gen_img_pred < this_gen_img_pred :
                         best_gen_img = gen_img_to_print
                         best_gen_img_pred = this_gen_img_pred
-                    print(best_gen_img_pred, this_gen_img_pred, mu[0,0].item(), log_var[0,0].item())
+                    print(best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, mu[0,0].item(), log_var[0,0].item())
                     for p in params:
                         if p.grad is not None:
                             p.grad.data.zero_()
@@ -430,6 +438,20 @@ if __name__ == "__main__":
         help="Filename of backdoor model.",
     )
     parser.add_argument(
+        "--model_reference",
+        type=str,
+        default="Debenedetti2022Light_XCiT-S12",
+        choices=["Debenedetti2022Light_XCiT-S12","Salman2020Do_R18"],
+        help="Filename of reference model.",
+    )
+    parser.add_argument(
+        "--trained_dataset_reference_model",
+        type=str,
+        default="imagenet",
+        choices=["imagenet", "coco"],
+        help="Dataset in which the reference model has been trained on.",
+    )
+    parser.add_argument(
         "--model_backdoor_backbone",
         type=str,
         default="resnet18",
@@ -498,6 +520,14 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--target_class",
+        type=int,
+        default=-1,
+        help=""
+        ""
+        "",
+    )
+    parser.add_argument(
+        "--reference_target_class",
         type=int,
         default=-1,
         help=""
