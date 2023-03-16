@@ -239,7 +239,9 @@ def run(config):
     all_images_filename = []
     for sub_dir in os.listdir(data_path):
         print(sub_dir)
-        all_images_filename.append([os.path.join(sub_dir, filename) for filename in os.listdir(os.path.join(data_path,sub_dir))])
+        dir_list = [os.path.join(sub_dir, filename) for filename in os.listdir(os.path.join(data_path,sub_dir))]
+        print(dir_list)
+        all_images_filename.append(dir_list)
     # Loop over loader
     for i, (x, y, image_id) in enumerate(tqdm(train_loader)):
         all_image_ids.append(image_id)
