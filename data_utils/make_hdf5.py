@@ -347,8 +347,14 @@ def run(config):
                         f["feats_hflip"][-x_feat_hflip.shape[0] :] = x_feat_hflip
 
     print( "Saved index images for evaluation set (in order of appearance in the hdf5 file)" )
-    np_all_image_ids = np.concatenate(all_image_ids)
-    np_all_images_filename = np.concatenate(all_images_filename)
+    if len(all_image_ids) > 0 :
+        np_all_image_ids = np.concatenate(all_image_ids)
+    else :
+        np_all_image_ids = np.array(all_image_ids[0])
+    if len(all_images_filename) > 0:
+        np_all_images_filename = np.concatenate(all_images_filename)
+    else :
+        np_all_images_filename = np.array(all_images_filename[0])
     np.save(npyfile_name, np_all_images_filename[np_all_image_ids],)
 
 
