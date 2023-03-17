@@ -391,7 +391,7 @@ def main(test_config):
     plt.imshow(big_plot)
     plt.axis("off")
 
-    fig_path = "%s_Generations_with_InstanceDataset_%s%s%s_zvar%0.2f.png" % (
+    fig_path = "%s_Generations_with_InstanceDataset_%s%s%s_class%d.png" % (
         exp_name,
         test_config["which_dataset"],
         "_index" + str(test_config["index"])
@@ -400,7 +400,9 @@ def main(test_config):
         "_class_idx" + str(test_config["swap_target"])
         if test_config["swap_target"] is not None
         else "",
-        test_config["z_var"],
+        label
+        if label is not None
+        else "",
     )
     plt.savefig(fig_path, dpi=600, bbox_inches="tight", pad_inches=0)
 
