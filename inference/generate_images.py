@@ -333,7 +333,7 @@ def main(test_config):
                         best_gen_img = gen_img_to_print
                         best_gen_img_pred = this_gen_img_pred
                         best_gen_img_pred_ref = this_gen_img_pred_ref
-                    print(best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, mu[0,0].item(), log_var[0,0].item())
+                    #print(best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, mu[0,0].item(), log_var[0,0].item())
                     for p in params:
                         if p.grad is not None:
                             p.grad.data.zero_()
