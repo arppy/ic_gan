@@ -169,7 +169,7 @@ def get_conditionings(test_config, generator, data):
                 label_int = int(data["labels"][idx])
             except KeyError :
                 try :
-                    label_int = int(data["image_path"][idx].split('/')[1])
+                    label_int = int(data["image_path"][idx][0].split('/')[1])
                 except ValueError :
                     label_int = -1
         # Format labels according to the backbone
@@ -180,10 +180,9 @@ def get_conditionings(test_config, generator, data):
                 test_config["num_imgs_gen"], 1
             )
         elif label_int >= 0 :
-            if test_config["model"] == "cc_icgan":
-                labels = torch.LongTensor([label_int]).repeat(
-                    test_config["num_imgs_gen"]
-                )
+            labels = torch.LongTensor([label_int]).repeat(
+                test_config["num_imgs_gen"]
+            )
         all_labels.append(labels)
     # Concatenate all conditionings
     all_feats = torch.cat(all_feats)
@@ -296,9 +295,9 @@ def main(test_config):
                     test_config["batch_size"] * i + test_config["batch_size"], z.shape[0]
                 )
                 if all_labels is not None:
-                    labels = all_labels[start:end].to(device)
+                    label = all_labels[start:end][0].to(device)
                 else:
-                    labels = None
+                    label = None
                 if test_config["model"] == "cc_icgan":
                     labels_ = all_labels[start:end].to(device)
                 else:
@@ -318,8 +317,18 @@ def main(test_config):
                     logits_reference_model = model_reference(gen_img/255)
                     pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
                     pred_ref = torch.nn.functional.softmax(logits_reference_model, dim=1)
-                    this_gen_img_pred = torch.mean(pred[:,test_config["target_class"]]).item()
-                    this_gen_img_pred_ref = torch.mean(pred_ref[:,test_config["reference_target_class"]]).item()
+                    if label is None :
+                        this_gen_img_pred = torch.mean(pred[:,test_config["target_class"]]).item()
+                        this_gen_img_pred_ref = torch.mean(pred_ref[:,test_config["reference_target_class"]]).item()
+                    else :
+                        if test_config["is_backdoor_model_backdoored"] and label > test_config["backdoor_class"] :
+                            this_gen_img_pred = torch.mean(pred[:, label-1]).item()
+                        else :
+                            this_gen_img_pred = torch.mean(pred[:, label]).item()
+                        if test_config["is_reference_model_backdoored"] and label > test_config["backdoor_class"]:
+                            this_gen_img_pred_ref = torch.mean(pred_ref[:, label - 1]).item()
+                        else :
+                            this_gen_img_pred_ref = torch.mean(pred_ref[:, label ]).item()
                     if best_gen_img is None or best_gen_img_pred < this_gen_img_pred :
                         best_gen_img = gen_img_to_print
                         best_gen_img_pred = this_gen_img_pred
@@ -542,12 +551,32 @@ if __name__ == "__main__":
         "",
     )
     parser.add_argument(
+        "--backdoor_class",
+        type=int,
+        default=-1,
+        help=""
+        ""
+        "",
+    )
+    parser.add_argument(
         "--iter_times",
         type=int,
         default=1,
         help=""
         ""
         "",
+    )
+    parser.add_argument(
+        "--is_backdoor_model_backdoored",
+        action="store_true",
+        default=False,
+        help="",
+    )
+    parser.add_argument(
+        "--is_reference_model_backdoored",
+        action="store_true",
+        default=False,
+        help="",
     )
     parser.add_argument(
         "--visualize_instance_images",
