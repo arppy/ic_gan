@@ -260,7 +260,7 @@ def main(test_config):
     z_old, all_feats, all_labels, all_img_paths = get_conditionings(
         test_config, generator, data
     )
-    if test_config["--model_backdoor"] is not None :
+    if test_config["model_backdoor"] is not None :
         model_reference = rb.load_model(model_name=test_config["model_reference"],
                                         dataset=test_config["trained_dataset_reference_model"],
                                         threat_model="Linf").to(device)
@@ -288,7 +288,7 @@ def main(test_config):
     try :
         for it in range(test_config["iter_times"]):
             for i in range(num_batches):
-                if test_config["--model_backdoor"] is not None :
+                if test_config["model_backdoor"] is not None :
                     z = reparameterize(mu, log_var)
                 start = test_config["batch_size"] * i
                 end = min(
@@ -310,7 +310,7 @@ def main(test_config):
                 elif test_config["model_backbone"] == "stylegan2":
                     gen_img = torch.clamp((gen_img * 127.5 + 128), 0, 255)
                 gen_img_to_print = gen_img
-                if test_config["--model_backdoor"] is not None :
+                if test_config["model_backdoor"] is not None :
                     gen_img = transforms.functional.center_crop(gen_img, 224)
                     #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
                     logits_backdoor_model = backdoor_model(gen_img/255)
