@@ -332,6 +332,7 @@ def main(test_config):
                     if best_gen_img is None or best_gen_img_pred < this_gen_img_pred :
                         best_gen_img = gen_img_to_print
                         best_gen_img_pred = this_gen_img_pred
+                        best_gen_img_pred_ref = this_gen_img_pred_ref
                     print(best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, mu[0,0].item(), log_var[0,0].item())
                     for p in params:
                         if p.grad is not None:
@@ -403,11 +404,11 @@ def main(test_config):
         label
         if label is not None
         else "",
-        this_gen_img_pred
-        if this_gen_img_pred is not None
+        best_gen_img_pred
+        if best_gen_img_pred is not None
         else "",
-        this_gen_img_pred_ref
-        if this_gen_img_pred_ref is not None
+        best_gen_img_pred_ref
+        if best_gen_img_pred_ref is not None
         else ""
     )
     plt.savefig(fig_path, dpi=600, bbox_inches="tight", pad_inches=0)
