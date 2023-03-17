@@ -168,7 +168,10 @@ def get_conditionings(test_config, generator, data):
             try:
                 label_int = int(data["labels"][idx])
             except KeyError :
-                label_int = 0
+                try :
+                    label_int = int(data["image_path"][idx].split('/')[1])
+                except ValueError :
+                    label_int = -1
         # Format labels according to the backbone
         labels = None
         if test_config["model_backbone"] == "stylegan2":
@@ -176,7 +179,7 @@ def get_conditionings(test_config, generator, data):
             labels = torch.eye(dim_labels)[torch.LongTensor([label_int])].repeat(
                 test_config["num_imgs_gen"], 1
             )
-        else:
+        elif label_int >= 0 :
             if test_config["model"] == "cc_icgan":
                 labels = torch.LongTensor([label_int]).repeat(
                     test_config["num_imgs_gen"]
@@ -293,6 +296,10 @@ def main(test_config):
                     test_config["batch_size"] * i + test_config["batch_size"], z.shape[0]
                 )
                 if all_labels is not None:
+                    labels = all_labels[start:end].to(device)
+                else:
+                    labels = None
+                if test_config["model"] == "cc_icgan":
                     labels_ = all_labels[start:end].to(device)
                 else:
                     labels_ = None
