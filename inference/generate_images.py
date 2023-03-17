@@ -391,7 +391,7 @@ def main(test_config):
     plt.imshow(big_plot)
     plt.axis("off")
 
-    fig_path = "%s_Generations_with_InstanceDataset_%s%s%s_class%d.png" % (
+    fig_path = "%s_Generations_with_InstanceDataset_%s%s%s_class%d_1pred%0.2f_2pred%0.2f.png" % (
         exp_name,
         test_config["which_dataset"],
         "_index" + str(test_config["index"])
@@ -403,6 +403,12 @@ def main(test_config):
         label
         if label is not None
         else "",
+        this_gen_img_pred
+        if this_gen_img_pred is not None
+        else "",
+        this_gen_img_pred_ref
+        if this_gen_img_pred_ref is not None
+        else ""
     )
     plt.savefig(fig_path, dpi=600, bbox_inches="tight", pad_inches=0)
 
