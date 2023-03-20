@@ -256,6 +256,7 @@ def run(config):
             file_list = [os.path.join(dir, filename) for filename in os.listdir(os.path.join(data_path, dir))]
             all_images_filename.append(file_list)
     # Loop over loader
+    all_images = 0
     for i, (x, y, image_id) in enumerate(tqdm(train_loader)):
         all_image_ids.append(image_id)
         if not config["save_images_only"]:
@@ -361,7 +362,8 @@ def run(config):
                             f["feats_hflip"].shape[0] + x_feat_hflip.shape[0], axis=0
                         )
                         f["feats_hflip"][-x_feat_hflip.shape[0] :] = x_feat_hflip
-        if torch.max(image_id) > config["max_num_image"] :
+        all_images += len(image_id)
+        if  all_images > config["max_num_image"] :
             break
     print( "Saved index images for evaluation set (in order of appearance in the hdf5 file)" )
     if len(all_image_ids) > 0 :
