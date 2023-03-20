@@ -129,6 +129,12 @@ def prepare_parser():
         help="Default overall batchsize (default: %(default)s)",
     )
     parser.add_argument(
+        "--max_num_image",
+        type=int,
+        default=100000,
+        help="Default overall batchsize (default: %(default)s)",
+    )
+    parser.add_argument(
         "--compression",
         action="store_true",
         default=False,
@@ -176,7 +182,7 @@ def run(config):
         stuff_json=config["stuff_json"],
     )
     train_loader = utils.get_dataloader(
-        dataset, config["batch_size"], shuffle=False, **kwargs
+        dataset, config["batch_size"], shuffle=True, **kwargs
     )
 
     # HDF5 supports chunking and compression. You may want to experiment
@@ -347,7 +353,8 @@ def run(config):
                             f["feats_hflip"].shape[0] + x_feat_hflip.shape[0], axis=0
                         )
                         f["feats_hflip"][-x_feat_hflip.shape[0] :] = x_feat_hflip
-
+        if torch.max(image_id) > config["max_num_image"] :
+            break
     print( "Saved index images for evaluation set (in order of appearance in the hdf5 file)" )
     if len(all_image_ids) > 0 :
         np_all_image_ids = np.concatenate(all_image_ids)
