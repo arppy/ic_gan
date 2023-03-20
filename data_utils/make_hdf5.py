@@ -22,6 +22,7 @@ import torch
 
 import utils
 import torchvision.transforms.functional as tv_f
+import torchvision
 
 
 def prepare_parser():
@@ -132,7 +133,13 @@ def prepare_parser():
         "--max_num_image",
         type=int,
         default=100000,
-        help="Default overall batchsize (default: %(default)s)",
+        help="Max number of image (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--blur_kernel_size",
+        type=int,
+        default=0,
+        help="Blur images with kernel size (default: %(default)s)",
     )
     parser.add_argument(
         "--compression",
@@ -257,7 +264,8 @@ def run(config):
                 x_tf = x_tf * 0.5 + 0.5
                 x_tf = (x_tf - norm_mean) / norm_std
                 x_tf = torch.nn.functional.interpolate(x_tf, 224, mode="bicubic")
-
+                if config["blur_kernel_size"] > 0:
+                    x_tf.data = torchvision.transforms.functional.gaussian_blur(x_tf.data, kernel_size=config["blur_kernel_size"])
                 x_feat, _ = net(x_tf)
                 x_feat = x_feat.cpu().numpy()
                 if config["feature_augmentation"]:
