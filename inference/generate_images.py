@@ -76,7 +76,7 @@ STD[DATASET.YTF.value] = [0.229, 0.224, 0.225]
 NUM_OF_CLASS[DATASET.YTF.value] = 1203
 VAL_SIZE[DATASET.YTF.value] = 12000
 
-def get_data(root_path, model, resolution, which_dataset, visualize_instance_images):
+def get_data(root_path, model, resolution, which_dataset, visualize_instance_images, blur_kernel_size=0):
     data_path = os.path.join(root_path, "stored_instances")
     if model == "cc_icgan":
         feature_extractor = "classification"
@@ -93,9 +93,10 @@ def get_data(root_path, model, resolution, which_dataset, visualize_instance_ima
     transform_list = None
     if visualize_instance_images:
         # Transformation used for ImageNet images.
-        transform_list = transforms.Compose(
-            [data_utils.CenterCropLongEdge(), transforms.Resize(resolution)]
-        )
+        transform_list_list = [data_utils.CenterCropLongEdge(), transforms.Resize(resolution)]
+        if blur_kernel_size > 0 :
+            transform_list_list.append(transforms.GaussianBlur(kernel_size=blur_kernel_size))
+        transform_list = transforms.Compose(transform_list_list)
     return data, transform_list
 
 
@@ -247,6 +248,7 @@ def main(test_config):
         test_config["resolution"],
         test_config["which_dataset"],
         test_config["visualize_instance_images"],
+        test_config["blur_kernel_size"]
     )
 
     ### -- Model -- ###
@@ -570,6 +572,14 @@ if __name__ == "__main__":
         "--iter_times",
         type=int,
         default=1,
+        help=""
+        ""
+        "",
+    )
+    parser.add_argument(
+        "--blur_kernel_size",
+        type=int,
+        default=0,
         help=""
         ""
         "",
