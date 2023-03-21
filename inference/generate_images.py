@@ -153,7 +153,7 @@ def get_conditionings(test_config, generator, data):
             idx = total_idxs[counter]
         # Image paths to visualize ground-truth instance
         if test_config["visualize_instance_images"]:
-            all_img_paths.append(data["image_path"][idx])
+            all_img_paths.append(data["image_path"][idx][1])
         # Instance features
         all_feats.append(
             torch.FloatTensor(data["instance_features"][idx : idx + 1]).repeat(
@@ -170,7 +170,7 @@ def get_conditionings(test_config, generator, data):
                 label_int = int(data["labels"][idx])
             except KeyError :
                 try :
-                    label_int = int(data["image_path"][idx][0].split('/')[1])
+                    label_int = int(data["image_path"][idx][1].split('/')[1])
                 except ValueError :
                     label_int = -1
         # Format labels according to the backbone
