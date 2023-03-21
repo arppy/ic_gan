@@ -374,7 +374,7 @@ def run(config):
         np_all_images_filename = np.concatenate(all_images_filename)
     else :
         np_all_images_filename = np.array(all_images_filename[0])
-    save_this = np.column_stack(np_all_image_ids, np_all_images_filename[np_all_image_ids])
+    save_this = np.column_stack((np_all_image_ids, np_all_images_filename[np_all_image_ids]))
     np.save(npyfile_name, save_this,)
 
 
