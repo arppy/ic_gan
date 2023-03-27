@@ -345,10 +345,16 @@ def main(test_config):
                         best_gen_img_pred = this_gen_img_pred
                         best_gen_img_pred_ref = this_gen_img_pred_ref
                     print(best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, mu[0,0].item(), log_var[0,0].item())
-                    for p in params:
-                        if p.grad is not None:
-                            p.grad.data.zero_()
-                    pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
+                    #for p in params:
+                    #    if p.grad is not None:
+                    #        p.grad.data.zero_()
+                    if label is None:
+                        pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
+                    else :
+                        if test_config["is_backdoor_model_backdoored"] and label > test_config["backdoor_class"] :
+                            pred_target_scalar = torch.mean(pred[:, label-1])
+                        else :
+                            pred_target_scalar = torch.mean(pred[:, label])
                     (-pred_target_scalar).backward()
                     solver.step()
     except KeyboardInterrupt:
