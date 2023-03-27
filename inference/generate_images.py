@@ -266,10 +266,12 @@ def main(test_config):
     z_old, all_feats, all_labels, all_img_paths = get_conditionings(
         test_config, generator, data
     )
-    rand_feats =  torch.normal(mean=means[:,0], std=means[:,1])
-    print(rand_feats)
+    rand_feats = torch.Tensor()
+    for i in range(test_config["num_imgs_gen"]) :
+        rand_feats = torch.cat((rand_feats, torch.normal(mean=means[:,0], std=means[:,1]).unsqueeze(0)))
+    rand_feats = rand_feats.to(device)
     print(all_feats.shape,rand_feats.shape)
-    print(torch.mean(all_feats), torch.mean(means[:,0]))
+    print(torch.mean(all_feats), torch.mean(rand_feats), torch.mean(means[:,0]))
     if test_config["model_backdoor"] is not None :
         model_reference = rb.load_model(model_name=test_config["model_reference"],
                                         dataset=test_config["trained_dataset_reference_model"],
