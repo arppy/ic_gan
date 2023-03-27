@@ -266,12 +266,11 @@ def main(test_config):
     z_old, all_feats, all_labels, all_img_paths = get_conditionings(
         test_config, generator, data
     )
-    rand_feats = torch.Tensor()
-    for i in range(test_config["num_imgs_gen"]) :
-        rand_feats = torch.cat((rand_feats, torch.normal(mean=means[:,0], std=means[:,1]).unsqueeze(0)))
-    rand_feats = rand_feats.to(device)
-    print(all_feats.shape,rand_feats.shape)
-    print(torch.mean(all_feats), torch.mean(rand_feats), torch.mean(means[:,0]))
+    if test_config["random_features"] :
+        rand_feats = torch.Tensor()
+        for i in range(test_config["num_imgs_gen"]):
+            rand_feats = torch.cat((rand_feats, torch.normal(mean=means[:, 0], std=means[:, 1]).unsqueeze(0)))
+        all_feats = rand_feats
     if test_config["model_backdoor"] is not None :
         model_reference = rb.load_model(model_name=test_config["model_reference"],
                                         dataset=test_config["trained_dataset_reference_model"],
@@ -345,7 +344,7 @@ def main(test_config):
                         best_gen_img = gen_img_to_print
                         best_gen_img_pred = this_gen_img_pred
                         best_gen_img_pred_ref = this_gen_img_pred_ref
-                    #print(best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, mu[0,0].item(), log_var[0,0].item())
+                    print(best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, mu[0,0].item(), log_var[0,0].item())
                     for p in params:
                         if p.grad is not None:
                             p.grad.data.zero_()
@@ -596,6 +595,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--is_backdoor_model_backdoored",
+        action="store_true",
+        default=False,
+        help="",
+    )
+    parser.add_argument(
+        "--random_features",
         action="store_true",
         default=False,
         help="",
