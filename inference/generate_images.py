@@ -93,7 +93,7 @@ def get_data(root_path, model, resolution, which_dataset, visualize_instance_ima
     filename_means = "%s_valid_means.npy" % (
         which_dataset
     )
-    means = np.load(os.path.join(data_path, filename_means), allow_pickle=True).item()
+    means = torch.from_numpy(np.load(os.path.join(data_path, filename_means), allow_pickle=True))
 
     transform_list = None
     if visualize_instance_images:
@@ -255,7 +255,6 @@ def main(test_config):
         test_config["visualize_instance_images"],
         test_config["blur_kernel_size"]
     )
-
     ### -- Model -- ###
     generator = get_model(
         exp_name, test_config["root_path"], test_config["model_backbone"], device=device
@@ -267,6 +266,10 @@ def main(test_config):
     z_old, all_feats, all_labels, all_img_paths = get_conditionings(
         test_config, generator, data
     )
+    rand_feats =  torch.normal(mean=means[:,0], std=means[:,1])
+    print(rand_feats)
+    print(all_feats.shape,rand_feats.shape)
+    print(torch.mean(all_feats), torch.mean(means[:,0]))
     if test_config["model_backdoor"] is not None :
         model_reference = rb.load_model(model_name=test_config["model_reference"],
                                         dataset=test_config["trained_dataset_reference_model"],
