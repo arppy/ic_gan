@@ -239,14 +239,21 @@ def run(config):
         "Starting to load dataset into an HDF5 file with chunk size %i and compression %s..."
         % (config["chunk_size"], config["compression"])
     )
-    npyfile_name = config["out_path"] + "/%s%i%s%s%s_paths.npy" % (
+    npyfile_name_for_paths = config["out_path"] + "/%s%i%s%s%s_paths.npy" % (
         dataset_name_prefix,
         config["resolution"],
         "" if config["which_dataset"] != "imagenet_lt" else "longtail",
         "_val" if config["split"] == "val" else "",
         "_test" if test_part else "",
     )
-    print("Filenames are ", npyfile_name)
+    npyfile_name_for_means_and_stds = config["out_path"] + "/%s%i%s%s%s_means.npy" % (
+        dataset_name_prefix,
+        config["resolution"],
+        "" if config["which_dataset"] != "imagenet_lt" else "longtail",
+        "_val" if config["split"] == "val" else "",
+        "_test" if test_part else "",
+    )
+    print("Filenames are ", npyfile_name_for_paths, "and", npyfile_name_for_means_and_stds)
     # Save original image indexes in order for the evaluation set
     all_image_ids = []
     all_images_filename = []
@@ -257,6 +264,8 @@ def run(config):
             all_images_filename.append(file_list)
     # Loop over loader
     all_images = 0
+    x_feat_mean = torch.Tensor()
+    x_feat_std = torch.Tensor()
     for i, (x, y, image_id) in enumerate(tqdm(train_loader)):
         all_image_ids.append(image_id)
         if not config["save_images_only"]:
@@ -268,6 +277,8 @@ def run(config):
                 if config["blur_kernel_size"] > 0:
                     x_tf.data = torchvision.transforms.functional.gaussian_blur(x_tf.data, kernel_size=config["blur_kernel_size"])
                 x_feat, _ = net(x_tf)
+                x_feat_mean = torch.cat( (x_feat_mean, torch.mean(x_feat.cpu(), dim=0).unsqueeze(0)) )
+                x_feat_std = torch.cat( (x_feat_std, torch.std(x_feat.cpu(), dim=0).unsqueeze(0)) )
                 x_feat = x_feat.cpu().numpy()
                 if config["feature_augmentation"]:
                     x_tf_hflip = tv_f.hflip(x_tf)
@@ -365,6 +376,8 @@ def run(config):
         all_images += len(image_id)
         if  all_images > config["max_num_image"] :
             break
+    x_feat_mean_np = torch.mean(x_feat_mean, dim=0).numpy()
+    x_feat_std_np = torch.sqrt((torch.sum(torch.square(x_feat_mean),dim=0) / x_feat_mean.shape[0])).numpy()
     print( "Saved index images for evaluation set (in order of appearance in the hdf5 file)" )
     if len(all_image_ids) > 0 :
         np_all_image_ids = np.concatenate(all_image_ids)
@@ -374,8 +387,10 @@ def run(config):
         np_all_images_filename = np.concatenate(all_images_filename)
     else :
         np_all_images_filename = np.array(all_images_filename[0])
-    save_this = np.column_stack((np_all_image_ids, np_all_images_filename[np_all_image_ids]))
-    np.save(npyfile_name, save_this,)
+    save_this_as_paths = np.column_stack((np_all_image_ids, np_all_images_filename[np_all_image_ids]))
+    np.save(npyfile_name_for_paths, save_this_as_paths,)
+    save_this_as_means = np.column_stack((x_feat_mean_np, x_feat_std_np))
+    np.save(npyfile_name_for_means_and_stds, save_this_as_means,)
 
 
 def main():
