@@ -90,6 +90,11 @@ def get_data(root_path, model, resolution, which_dataset, visualize_instance_ima
     # Load conditioning instances from files
     data = np.load(os.path.join(data_path, filename), allow_pickle=True).item()
 
+    filename_means = "%s_valid_means.npy" % (
+        which_dataset
+    )
+    means = np.load(os.path.join(data_path, filename_means), allow_pickle=True).item()
+
     transform_list = None
     if visualize_instance_images:
         # Transformation used for ImageNet images.
@@ -97,7 +102,7 @@ def get_data(root_path, model, resolution, which_dataset, visualize_instance_ima
         if blur_kernel_size > 0 :
             transform_list_list.append(transforms.GaussianBlur(kernel_size=blur_kernel_size))
         transform_list = transforms.Compose(transform_list_list)
-    return data, transform_list
+    return data, transform_list, means
 
 
 def get_model(exp_name, root_path, backbone, device="cuda"):
@@ -242,7 +247,7 @@ def main(test_config):
     )
     device = torch.device('cuda:' + str(test_config["gpu"]))
     ### -- Data -- ###
-    data, transform_list = get_data(
+    data, transform_list, means = get_data(
         test_config["root_path"],
         test_config["model"],
         test_config["resolution"],
