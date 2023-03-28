@@ -350,8 +350,6 @@ def main(test_config):
                         best_gen_img = gen_img_to_print
                         best_gen_img_pred = this_gen_img_pred
                         best_gen_img_pred_ref = this_gen_img_pred_ref
-                    if it % 100 == 0 :
-                        print(best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, mu[0,0].item(), log_var[0,0].item())
                     if label is None:
                         pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
                     else :
@@ -362,6 +360,8 @@ def main(test_config):
                     logsumexp_scalar = torch.mean(torch.logsumexp(logits_backdoor_model, dim=1))
                     (-logsumexp_scalar).backward()
                     solver.step()
+                    if it % 100 == 0:
+                        print(best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, logsumexp_scalar, mu[0, 0].item(), log_var[0, 0].item())
     except KeyboardInterrupt:
         print("Interrupt at:", it)
         pass
