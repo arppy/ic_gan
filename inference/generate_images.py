@@ -259,7 +259,6 @@ def main(test_config):
     generator = get_model(
         exp_name, test_config["root_path"], test_config["model_backbone"], device=device
     )
-
     ### -- Generate images -- ###
     # Prepare input and conditioning: different noise vector per sample but the same conditioning
     # Sample noise vector
@@ -271,6 +270,7 @@ def main(test_config):
         for i in range(test_config["num_imgs_gen"]):
             rand_feats = torch.cat((rand_feats, torch.normal(mean=means[:, 0], std=means[:, 1]).unsqueeze(0)))
         all_feats = rand_feats
+    num_batches = 1 + (all_feats.shape[0]) // test_config["batch_size"]
     if test_config["model_backdoor"] is not None :
         model_reference = rb.load_model(model_name=test_config["model_reference"],
                                         dataset=test_config["trained_dataset_reference_model"],
@@ -288,13 +288,19 @@ def main(test_config):
         params = [all_feats]
         #params = [mu, log_var]
         #params = [mu, log_var,all_feats]
-        solver = torch.optim.Adam(params, lr=test_config["learning_rate"])
+        solver = torch.optim.SGD(params, lr=test_config["learning_rate"], momentum=0.9, weight_decay=1e-4)
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(solver, max_lr=test_config["learning_rate"],
+                                                        total_steps=None, epochs=test_config["iter_times"],
+                                                        steps_per_epoch=num_batches,
+                                                        pct_start=0.0025, anneal_strategy='cos',
+                                                        cycle_momentum=False, div_factor=1.0,
+                                                        final_div_factor=1000000.0, three_phase=False, last_epoch=- 1,
+                                                        verbose=False)
         z = reparameterize(mu, log_var)
     else :
         z = z_old
     ## Generate the images
     all_generated_images = []
-    num_batches = 1 + (z.shape[0]) // test_config["batch_size"]
     freeze(generator)
     best_gen_img_pred = 0.0
     best_gen_img = None
@@ -360,8 +366,9 @@ def main(test_config):
                     logsumexp_scalar = torch.mean(torch.logsumexp(logits_backdoor_model, dim=1))
                     (-test_config["alpha"] * pred_target_scalar -test_config["gamma"] * logsumexp_scalar).backward()
                     solver.step()
+                    scheduler.step()
                     if it % 100 == 0:
-                        print(best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, logsumexp_scalar.item(), mu[0, 0].item(), log_var[0, 0].item())
+                        print(it, scheduler.get_last_lr()[0], best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, logsumexp_scalar.item(), mu[0, 0].item(), log_var[0, 0].item(), all_feats)
     except KeyboardInterrupt:
         print("Interrupt at:", it)
         pass
