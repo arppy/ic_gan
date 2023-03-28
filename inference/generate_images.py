@@ -361,7 +361,7 @@ def main(test_config):
                     (-logsumexp_scalar).backward()
                     solver.step()
                     if it % 100 == 0:
-                        print(best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, logsumexp_scalar, mu[0, 0].item(), log_var[0, 0].item())
+                        print(best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, logsumexp_scalar.item(), mu[0, 0].item(), log_var[0, 0].item())
     except KeyboardInterrupt:
         print("Interrupt at:", it)
         pass
