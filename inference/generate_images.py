@@ -359,7 +359,8 @@ def main(test_config):
                             pred_target_scalar = torch.mean(pred[:, label-1])
                         else :
                             pred_target_scalar = torch.mean(pred[:, label])
-                    (-pred_target_scalar).backward()
+                    logsumexp_scalar = torch.mean(torch.logsumexp(logits_backdoor_model, dim=1))
+                    (-logsumexp_scalar).backward()
                     solver.step()
     except KeyboardInterrupt:
         print("Interrupt at:", it)
