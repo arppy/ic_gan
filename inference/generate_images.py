@@ -358,7 +358,7 @@ def main(test_config):
                         else :
                             pred_target_scalar = torch.mean(pred[:, label])
                     logsumexp_scalar = torch.mean(torch.logsumexp(logits_backdoor_model, dim=1))
-                    (-logsumexp_scalar).backward()
+                    (-test_config["alpha"] * pred_target_scalar -test_config["gamma"] * logsumexp_scalar).backward()
                     solver.step()
                     if it % 100 == 0:
                         print(best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, logsumexp_scalar.item(), mu[0, 0].item(), log_var[0, 0].item())
@@ -560,6 +560,22 @@ if __name__ == "__main__":
         "--learning_rate",
         type=float,
         default=2e-2,
+        help=""
+        ""
+        "",
+    )
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=1.0,
+        help=""
+        ""
+        "",
+    )
+    parser.add_argument(
+        "--gamma",
+        type=float,
+        default=0.01,
         help=""
         ""
         "",
