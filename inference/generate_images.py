@@ -304,7 +304,7 @@ def main(test_config):
                                                         verbose=False)
         z = reparameterize(mu, log_var)
         criterion_ce = torch.nn.CrossEntropyLoss().to(device)
-        criterion_bce = torch.nn.BCEWithLogitsLoss.to(device)
+        criterion_bce = torch.nn.BCEWithLogitsLoss().to(device)
     else :
         z = z_old
     ## Generate the images
