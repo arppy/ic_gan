@@ -385,7 +385,7 @@ def main(test_config):
                     #Prior_Loss = torch.mean(torch.nn.functional.softplus(log_sum_exp(d_out))) - torch.mean(log_sum_exp(d_out))
                     Prior_Loss = - d_out.mean()
                     Iden_Loss = criterion(logits_backdoor_model, label_ce)
-                    Total_Loss = Prior_Loss + test_config["gamma"] * Iden_Loss
+                    Total_Loss = test_config["alpha"] * Prior_Loss + test_config["gamma"] * Iden_Loss
                     Total_Loss.backward()
                     solver.step()
                     scheduler.step()
