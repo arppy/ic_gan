@@ -312,6 +312,7 @@ def main(test_config):
     freeze(discriminator)
     best_gen_img_pred = 0.0
     best_gen_img = None
+    best_gen_img_argmax_ref = -1
     try :
         for it in range(test_config["iter_times"]):
             for i in range(num_batches):
@@ -352,6 +353,7 @@ def main(test_config):
                     if label is None :
                         this_gen_img_pred = torch.mean(pred[:,test_config["target_class"]]).item()
                         this_gen_img_pred_ref = torch.mean(pred_ref[:,test_config["reference_target_class"]]).item()
+                        this_gen_img_argmax_ref = torch.argmax(pred_ref[:, test_config["reference_target_class"] ]).item()
                     else :
                         if test_config["is_backdoor_model_backdoored"] and label > test_config["backdoor_class"] :
                             this_gen_img_pred = torch.mean(pred[:, label-1]).item()
@@ -359,12 +361,15 @@ def main(test_config):
                             this_gen_img_pred = torch.mean(pred[:, label]).item()
                         if test_config["is_reference_model_backdoored"] and label > test_config["backdoor_class"]:
                             this_gen_img_pred_ref = torch.mean(pred_ref[:, label - 1]).item()
+                            this_gen_img_argmax_ref = torch.argmax(pred_ref[:, label - 1]).item()
                         else :
                             this_gen_img_pred_ref = torch.mean(pred_ref[:, label ]).item()
+                            this_gen_img_argmax_ref = torch.argmax(pred_ref[:, label ]).item()
                     if best_gen_img is None or best_gen_img_pred < this_gen_img_pred :
                         best_gen_img = gen_img_to_print
                         best_gen_img_pred = this_gen_img_pred
                         best_gen_img_pred_ref = this_gen_img_pred_ref
+                        best_gen_img_argmax_ref = this_gen_img_argmax_ref
                     label_ce = torch.ones(logits_backdoor_model.shape[0]).long().to(device)
                     if label is None:
                         label_ce *= test_config["target_class"].to(device)
@@ -387,7 +392,7 @@ def main(test_config):
                     solver.step()
                     scheduler.step()
                     if it % 100 == 0:
-                        print(it, scheduler.get_last_lr()[0], best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, logsumexp_scalar.item(), d_out.mean().item(), mu[0, 0].item(), log_var[0, 0].item(), all_feats)
+                        print(it, scheduler.get_last_lr()[0], best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, best_gen_img_argmax_ref, logsumexp_scalar.item(), d_out.mean().item(), mu[0, 0].item(), log_var[0, 0].item(), all_feats)
     except KeyboardInterrupt:
         print("Interrupt at:", it)
         pass
@@ -440,7 +445,7 @@ def main(test_config):
     plt.imshow(big_plot)
     plt.axis("off")
 
-    fig_path = "%s_Generations_with_InstanceDataset_%s%s%s_class%d_1pred%0.2f_2pred%0.2f.png" % (
+    fig_path = "%s_Generations_with_InstanceDataset_%s%s%s_class%d_1pred%0.2f_2pred%0.2f_prc%d_1.png" % (
         exp_name,
         test_config["which_dataset"],
         "_index" + str(test_config["index"])
@@ -457,7 +462,8 @@ def main(test_config):
         else 0.0,
         best_gen_img_pred_ref
         if best_gen_img_pred_ref is not None
-        else 0.0
+        else 0.0,
+        best_gen_img_argmax_ref
     )
     plt.savefig(fig_path, dpi=600, bbox_inches="tight", pad_inches=0)
 
