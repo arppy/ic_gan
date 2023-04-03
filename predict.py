@@ -231,9 +231,11 @@ def load_icgan(experiment_name, root_=""):
     config["weights_root"] = root_
     config["model_backbone"] = "biggan"
     config["experiment_name"] = experiment_name
-    G, config = inference_utils.load_model_inference(config)
+    G, D, config = inference_utils.load_model_inference(config)
     G.cuda()
+    D.cuda()
     G.eval()
+    D.eval()
     return G
 
 

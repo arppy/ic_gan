@@ -52,7 +52,7 @@ class Tester:
         biggan_utils.prepare_root(self.config)
 
         # Load model
-        self.G, self.config = inference_utils.load_model_inference(self.config)
+        self.G, self.D, self.config = inference_utils.load_model_inference(self.config)
         biggan_utils.count_parameters(self.G)
 
         # Get sampling function and reference statistics for FID

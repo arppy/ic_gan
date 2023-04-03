@@ -378,6 +378,7 @@ def load_model_inference(config, device="cuda"):
 
         # Next, build the model
         generator = BigGANModel.Generator(**config).to(device)
+        discriminator = BigGANModel.Discriminator(**config).to(device)
 
         # Load weights
         print("Loading weights...")
@@ -398,6 +399,7 @@ def load_model_inference(config, device="cuda"):
         if config["G_eval_mode"]:
             print("Putting G in eval mode..")
             generator.eval()
+            discriminator.eval()
         else:
             print("G is in %s mode..." % ("training" if generator.training else "eval"))
 
@@ -409,7 +411,8 @@ def load_model_inference(config, device="cuda"):
         print('Loading networks from "%s"...' % network_pkl)
         with dnnlib.util.open_url(network_pkl) as f:
             generator = legacy.load_network_pkl(f)["G_ema"].to(device)  # type: ignore
-    return generator, config
+            discriminator = legacy.load_network_pkl(f)["D"].to(device)  # type: ignore
+    return generator, discriminator, config
 
 
 def add_backbone_parser(parser):

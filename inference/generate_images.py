@@ -118,11 +118,12 @@ def get_model(exp_name, root_path, backbone, device="cuda"):
 
     # Load model and overwrite configuration parameters if stored in the model
     config = biggan_utils.update_config_roots(config, change_weight_folder=False)
-    generator, config = inference_utils.load_model_inference(config, device=device)
+    generator, discriminator, config = inference_utils.load_model_inference(config, device=device)
     biggan_utils.count_parameters(generator)
     generator.eval()
+    discriminator.eval()
 
-    return generator
+    return generator, discriminator
 def reparameterize(mu, logvar):
   """
   Reparameterization trick to sample from N(mu, var) from
@@ -256,7 +257,7 @@ def main(test_config):
         test_config["blur_kernel_size"]
     )
     ### -- Model -- ###
-    generator = get_model(
+    generator, discriminator = get_model(
         exp_name, test_config["root_path"], test_config["model_backbone"], device=device
     )
     ### -- Generate images -- ###
