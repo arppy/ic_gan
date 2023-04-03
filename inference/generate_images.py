@@ -379,7 +379,8 @@ def main(test_config):
                     logsumexp_scalar = torch.mean(torch.logsumexp(logits_backdoor_model, dim=1))
                     #(-test_config["alpha"] * pred_target_scalar -test_config["gamma"] * logsumexp_scalar).backward()
                     #(-pred_target_scalar).backward()
-                    Prior_Loss = torch.mean(torch.nn.functional.softplus(log_sum_exp(d_out))) - torch.mean(log_sum_exp(d_out))
+                    #Prior_Loss = torch.mean(torch.nn.functional.softplus(log_sum_exp(d_out))) - torch.mean(log_sum_exp(d_out))
+                    Prior_Loss = - d_out.mean()
                     Iden_Loss = criterion(logits_backdoor_model, label_ce)
                     Total_Loss = Prior_Loss + test_config["gamma"] * Iden_Loss
                     Total_Loss.backward()
