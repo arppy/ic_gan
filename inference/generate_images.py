@@ -303,7 +303,8 @@ def main(test_config):
                                                         final_div_factor=1000000000.0, three_phase=False, last_epoch=-1,
                                                         verbose=False)
         z = reparameterize(mu, log_var)
-        criterion = torch.nn.CrossEntropyLoss().to(device)
+        criterion_ce = torch.nn.CrossEntropyLoss().to(device)
+        criterion_bce = torch.nn.BCEWithLogitsLoss.to(device)
     else :
         z = z_old
     ## Generate the images
@@ -369,6 +370,7 @@ def main(test_config):
                         best_gen_img_pred_ref = this_gen_img_pred_ref
                         best_gen_img_argmax_ref = this_gen_img_argmax_ref
                     label_ce = torch.ones(logits_backdoor_model.shape[0]).long().to(device)
+                    label_bce = torch.ones(d_out.shape[0]).long().to(device)
                     if label is None:
                         label_ce *= test_config["target_class"].to(device)
                         pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
@@ -383,8 +385,8 @@ def main(test_config):
                     #(-test_config["alpha"] * pred_target_scalar -test_config["gamma"] * logsumexp_scalar).backward()
                     #(-pred_target_scalar).backward()
                     #Prior_Loss = torch.mean(torch.nn.functional.softplus(log_sum_exp(d_out))) - torch.mean(log_sum_exp(d_out))
-                    Prior_Loss = - d_out.mean()
-                    Iden_Loss = criterion(logits_backdoor_model, label_ce)
+                    Prior_Loss = criterion_bce(d_out, label_bce)
+                    Iden_Loss = criterion_ce(logits_backdoor_model, label_ce)
                     Total_Loss = test_config["alpha"] * Prior_Loss + test_config["gamma"] * Iden_Loss
                     Total_Loss.backward()
                     solver.step()
