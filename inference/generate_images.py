@@ -370,7 +370,7 @@ def main(test_config):
                         best_gen_img_pred_ref = this_gen_img_pred_ref
                         best_gen_img_argmax_ref = this_gen_img_argmax_ref
                     label_ce = torch.ones(logits_backdoor_model.shape[0]).long().to(device)
-                    label_bce = torch.ones(d_out.shape[0]).long().to(device)
+                    label_bce = torch.ones(d_out.shape[0]).unsqueeze(1).to(device)
                     if label is None:
                         label_ce *= test_config["target_class"].to(device)
                         pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
