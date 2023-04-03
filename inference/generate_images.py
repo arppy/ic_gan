@@ -353,7 +353,6 @@ def main(test_config):
                     if label is None :
                         this_gen_img_pred = torch.mean(pred[:,test_config["target_class"]]).item()
                         this_gen_img_pred_ref = torch.mean(pred_ref[:,test_config["reference_target_class"]]).item()
-                        this_gen_img_argmax_ref = torch.argmax(pred_ref[:, test_config["reference_target_class"] ]).item()
                     else :
                         if test_config["is_backdoor_model_backdoored"] and label > test_config["backdoor_class"] :
                             this_gen_img_pred = torch.mean(pred[:, label-1]).item()
@@ -361,10 +360,9 @@ def main(test_config):
                             this_gen_img_pred = torch.mean(pred[:, label]).item()
                         if test_config["is_reference_model_backdoored"] and label > test_config["backdoor_class"]:
                             this_gen_img_pred_ref = torch.mean(pred_ref[:, label - 1]).item()
-                            this_gen_img_argmax_ref = torch.argmax(pred_ref[:, label - 1]).item()
                         else :
                             this_gen_img_pred_ref = torch.mean(pred_ref[:, label ]).item()
-                            this_gen_img_argmax_ref = torch.argmax(pred_ref[:, label ]).item()
+                    this_gen_img_argmax_ref = torch.argmax(pred_ref).item()
                     if best_gen_img is None or best_gen_img_pred < this_gen_img_pred :
                         best_gen_img = gen_img_to_print
                         best_gen_img_pred = this_gen_img_pred
