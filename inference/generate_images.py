@@ -317,6 +317,9 @@ def main(test_config):
             for i in range(num_batches):
                 if test_config["model_backdoor"] is not None :
                     z = reparameterize(mu, log_var)
+                    for p in params:
+                        if p.grad is not None:
+                            p.grad.data.zero_()
                 start = test_config["batch_size"] * i
                 end = min(
                     test_config["batch_size"] * i + test_config["batch_size"], z.shape[0]
@@ -340,9 +343,6 @@ def main(test_config):
                 gen_img_to_print = gen_img
                 if test_config["model_backdoor"] is not None :
                     #solver.zero_grad()
-                    for p in params:
-                        if p.grad is not None:
-                            p.grad.data.zero_()
                     #gen_img = transforms.functional.center_crop(gen_img, 224)
                     #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
                     logits_backdoor_model = backdoor_model(gen_img/255)
@@ -387,7 +387,7 @@ def main(test_config):
                     solver.step()
                     scheduler.step()
                     if it % 100 == 0:
-                        print(it, scheduler.get_last_lr()[0], best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, logsumexp_scalar.item(), mu[0, 0].item(), log_var[0, 0].item(), all_feats)
+                        print(it, scheduler.get_last_lr()[0], best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, logsumexp_scalar.item(), d_out.mean().item(), mu[0, 0].item(), log_var[0, 0].item(), all_feats)
     except KeyboardInterrupt:
         print("Interrupt at:", it)
         pass
