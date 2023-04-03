@@ -268,6 +268,7 @@ def main(test_config):
     if test_config["random_features"] :
         rand_feats = torch.Tensor()
         for i in range(test_config["num_imgs_gen"]):
+            #rand_feats = torch.cat((rand_feats, torch.normal(mean=torch.zeros(means[:, 0].shape), std=torch.ones(means[:, 1].shape)).unsqueeze(0)))
             rand_feats = torch.cat((rand_feats, torch.normal(mean=means[:, 0], std=means[:, 1]).unsqueeze(0)))
         all_feats = rand_feats
     num_batches = 1 + (all_feats.shape[0]) // test_config["batch_size"]
@@ -294,9 +295,10 @@ def main(test_config):
                                                         steps_per_epoch=num_batches,
                                                         pct_start=0.0025, anneal_strategy='cos',
                                                         cycle_momentum=False, div_factor=1.0,
-                                                        final_div_factor=1000000.0, three_phase=False, last_epoch=- 1,
+                                                        final_div_factor=1000000000.0, three_phase=False, last_epoch=-1,
                                                         verbose=False)
         z = reparameterize(mu, log_var)
+        criterion = torch.nn.CrossEntropyLoss().to(device)
     else :
         z = z_old
     ## Generate the images
@@ -334,7 +336,7 @@ def main(test_config):
                     for p in params:
                         if p.grad is not None:
                             p.grad.data.zero_()
-                    gen_img = transforms.functional.center_crop(gen_img, 224)
+                    #gen_img = transforms.functional.center_crop(gen_img, 224)
                     #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
                     logits_backdoor_model = backdoor_model(gen_img/255)
                     logits_reference_model = model_reference(gen_img/255)
@@ -356,15 +358,22 @@ def main(test_config):
                         best_gen_img = gen_img_to_print
                         best_gen_img_pred = this_gen_img_pred
                         best_gen_img_pred_ref = this_gen_img_pred_ref
+                    label_ce = torch.ones(logits_backdoor_model.shape[0]).long().to(device)
                     if label is None:
+                        label_ce *= test_config["target_class"].to(device)
                         pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
                     else :
                         if test_config["is_backdoor_model_backdoored"] and label > test_config["backdoor_class"] :
+                            label_ce *= (label-1)
                             pred_target_scalar = torch.mean(pred[:, label-1])
                         else :
+                            label_ce *= label
                             pred_target_scalar = torch.mean(pred[:, label])
                     logsumexp_scalar = torch.mean(torch.logsumexp(logits_backdoor_model, dim=1))
-                    (-test_config["alpha"] * pred_target_scalar -test_config["gamma"] * logsumexp_scalar).backward()
+                    #(-test_config["alpha"] * pred_target_scalar -test_config["gamma"] * logsumexp_scalar).backward()
+                    #(-pred_target_scalar).backward()
+                    loss = criterion(logits_backdoor_model, label_ce)
+                    loss.backward()
                     solver.step()
                     scheduler.step()
                     if it % 100 == 0:
