@@ -232,6 +232,10 @@ def unfreeze(net):
   for p in net.parameters():
     p.requires_grad_(True)
 
+def log_sum_exp(x, axis = 1):
+    m = torch.max(x, dim = 1)[0]
+    return m + torch.log(torch.sum(torch.exp(x - m.unsqueeze(1)), dim = axis))
+
 def main(test_config):
     suffix = (
         "_nofeataug"
@@ -305,6 +309,7 @@ def main(test_config):
     ## Generate the images
     all_generated_images = []
     freeze(generator)
+    freeze(discriminator)
     best_gen_img_pred = 0.0
     best_gen_img = None
     try :
@@ -327,6 +332,7 @@ def main(test_config):
                 gen_img = generator(
                     z[start:end].to(device), labels_, all_feats[start:end].to(device)
                 )
+                d_out = discriminator(gen_img)
                 if test_config["model_backbone"] == "biggan":
                     gen_img = ((gen_img * 0.5 + 0.5) * 255)
                 elif test_config["model_backbone"] == "stylegan2":
@@ -373,8 +379,10 @@ def main(test_config):
                     logsumexp_scalar = torch.mean(torch.logsumexp(logits_backdoor_model, dim=1))
                     #(-test_config["alpha"] * pred_target_scalar -test_config["gamma"] * logsumexp_scalar).backward()
                     #(-pred_target_scalar).backward()
-                    loss = criterion(logits_backdoor_model, label_ce)
-                    loss.backward()
+                    Prior_Loss = torch.mean(torch.nn.functional.softplus(log_sum_exp(d_out))) - torch.mean(log_sum_exp(d_out))
+                    Iden_Loss = criterion(logits_backdoor_model, label_ce)
+                    Total_Loss = Prior_Loss + test_config["gamma"] * Iden_Loss
+                    Total_Loss.backward()
                     solver.step()
                     scheduler.step()
                     if it % 100 == 0:
