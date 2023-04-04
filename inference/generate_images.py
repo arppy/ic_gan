@@ -387,7 +387,12 @@ def main(test_config):
                     #Prior_Loss = torch.mean(torch.nn.functional.softplus(log_sum_exp(d_out))) - torch.mean(log_sum_exp(d_out))
                     Prior_Loss = criterion_bce(d_out, label_bce)
                     Iden_Loss = criterion_ce(logits_backdoor_model, label_ce)
-                    Total_Loss = test_config["alpha"] * Prior_Loss + test_config["gamma"] * Iden_Loss
+                    if test_config["alpha"] > 0.0 and test_config["gamma"] <= 0.0 :
+                        Total_Loss = test_config["alpha"] * Prior_Loss
+                    elif test_config["alpha"] <= 0.0 and test_config["gamma"] > 0.0 :
+                        Total_Loss = test_config["gamma"] * Iden_Loss
+                    else :
+                        Total_Loss = test_config["alpha"] * Prior_Loss + test_config["gamma"] * Iden_Loss
                     Total_Loss.backward()
                     solver.step()
                     scheduler.step()
