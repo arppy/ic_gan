@@ -433,15 +433,11 @@ def main(test_config):
     if test_config["visualize_instance_images"]:
         all_gt_imgs = []
         for i in range(0, len(all_img_paths)):
-            if type(all_img_paths[i]).__module__ == np.__name__ :
-                all_img_paths = all_img_paths[i][0]
-            else :
-                all_img_paths = all_img_paths[i]
             all_gt_imgs.append(
                 np.array(
                     transform_list(
                         pil_loader(
-                            os.path.join(test_config["dataset_path"], all_img_paths)
+                            os.path.join(test_config["dataset_path"], all_img_paths[i])
                         )
                     )
                 ).astype(np.uint8)
