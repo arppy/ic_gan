@@ -354,18 +354,30 @@ def main(test_config):
                     logits_reference_model = model_reference(gen_img/255)
                     pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
                     pred_ref = torch.nn.functional.softmax(logits_reference_model, dim=1)
+                    if test_config["is_database_backdoored"] :
+                        if (not test_config["is_backdoor_model_backdoored"]) and label >= test_config["backdoor_class"] :
+                            b_modifier = +1
+                        else :
+                            b_modifier = 0
+                        if (not test_config["is_reference_model_backdoored"]) and label >= test_config["backdoor_class"] :
+                            r_modifier = +1
+                        else :
+                            r_modifier = 0
+                    else :
+                        if test_config["is_backdoor_model_backdoored"] and label > test_config["backdoor_class"] :
+                            b_modifier = -1
+                        else :
+                            b_modifier = 0
+                        if test_config["is_reference_model_backdoored"] and label > test_config["backdoor_class"]:
+                            r_modifier = -1
+                        else :
+                            r_modifier = 0
                     if label is None :
                         this_gen_img_pred = torch.mean(pred[:,test_config["target_class"]]).item()
                         this_gen_img_pred_ref = torch.mean(pred_ref[:,test_config["reference_target_class"]]).item()
                     else :
-                        if test_config["is_backdoor_model_backdoored"] and label > test_config["backdoor_class"] :
-                            this_gen_img_pred = torch.mean(pred[:, label-1]).item()
-                        else :
-                            this_gen_img_pred = torch.mean(pred[:, label]).item()
-                        if test_config["is_reference_model_backdoored"] and label > test_config["backdoor_class"]:
-                            this_gen_img_pred_ref = torch.mean(pred_ref[:, label - 1]).item()
-                        else :
-                            this_gen_img_pred_ref = torch.mean(pred_ref[:, label ]).item()
+                        this_gen_img_pred = torch.mean(pred[:, label+b_modifier]).item()
+                        this_gen_img_pred_ref = torch.mean(pred_ref[:, label+r_modifier]).item()
                     this_gen_img_argmax_ref = torch.argmax(pred_ref).item()
                     if best_gen_img is None or best_gen_img_pred < this_gen_img_pred :
                         best_gen_img = gen_img_to_print
@@ -378,12 +390,8 @@ def main(test_config):
                         label_ce *= test_config["target_class"].to(device)
                         pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
                     else :
-                        if test_config["is_backdoor_model_backdoored"] and label > test_config["backdoor_class"] :
-                            label_ce *= (label-1)
-                            pred_target_scalar = torch.mean(pred[:, label-1])
-                        else :
-                            label_ce *= label
-                            pred_target_scalar = torch.mean(pred[:, label])
+                        label_ce *= (label+b_modifier)
+                        pred_target_scalar = torch.mean(pred[:, label+b_modifier])
                     logsumexp_scalar = torch.mean(torch.logsumexp(logits_backdoor_model, dim=1))
                     #(-test_config["alpha"] * pred_target_scalar -test_config["gamma"] * logsumexp_scalar).backward()
                     #(-pred_target_scalar).backward()
@@ -662,6 +670,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--is_backdoor_model_backdoored",
+        action="store_true",
+        default=False,
+        help="",
+    )
+    parser.add_argument(
+        "--is_database_backdoored",
         action="store_true",
         default=False,
         help="",
