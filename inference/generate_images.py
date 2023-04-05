@@ -76,7 +76,7 @@ STD[DATASET.YTF.value] = [0.229, 0.224, 0.225]
 NUM_OF_CLASS[DATASET.YTF.value] = 1203
 VAL_SIZE[DATASET.YTF.value] = 12000
 
-def get_data(root_path, model, resolution, which_dataset, visualize_instance_images, blur_kernel_size=0):
+def get_data(root_path, model, resolution, which_dataset, visualize_instance_images, blur_kernel_size=0, random_features=False):
     data_path = os.path.join(root_path, "stored_instances")
     if model == "cc_icgan":
         feature_extractor = "classification"
@@ -93,8 +93,10 @@ def get_data(root_path, model, resolution, which_dataset, visualize_instance_ima
     filename_means = "%s_valid_means.npy" % (
         which_dataset
     )
-    means = torch.from_numpy(np.load(os.path.join(data_path, filename_means), allow_pickle=True))
-
+    if random_features :
+        means = torch.from_numpy(np.load(os.path.join(data_path, filename_means), allow_pickle=True))
+    else :
+        means = None
     transform_list = None
     if visualize_instance_images:
         # Transformation used for ImageNet images.
@@ -258,7 +260,8 @@ def main(test_config):
         test_config["resolution"],
         test_config["which_dataset"],
         test_config["visualize_instance_images"],
-        test_config["blur_kernel_size"]
+        test_config["blur_kernel_size"],
+        test_config["random_features"]
     )
     ### -- Model -- ###
     generator, discriminator = get_model(
@@ -387,9 +390,9 @@ def main(test_config):
                     #Prior_Loss = torch.mean(torch.nn.functional.softplus(log_sum_exp(d_out))) - torch.mean(log_sum_exp(d_out))
                     Prior_Loss = criterion_bce(d_out, label_bce)
                     Iden_Loss = criterion_ce(logits_backdoor_model, label_ce)
-                    if test_config["alpha"] > 0.0 and test_config["gamma"] <= 0.0 :
+                    if test_config["alpha"] > 0.0 >= test_config["gamma"]:
                         Total_Loss = test_config["alpha"] * Prior_Loss
-                    elif test_config["alpha"] <= 0.0 and test_config["gamma"] > 0.0 :
+                    elif test_config["alpha"] <= 0.0 < test_config["gamma"]:
                         Total_Loss = test_config["gamma"] * Iden_Loss
                     else :
                         Total_Loss = test_config["alpha"] * Prior_Loss + test_config["gamma"] * Iden_Loss
