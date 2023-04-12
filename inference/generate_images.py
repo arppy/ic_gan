@@ -529,7 +529,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_backdoor",
         type=str,
-        choices=["Salman2020Do_869-742_imagenet_Epoch_N90.pkl"],
         help="Filename of backdoor model.",
     )
     parser.add_argument(
