@@ -286,7 +286,12 @@ def main(test_config):
                                         threat_model="Linf").to(device)
         freeze(model_reference)
         ### -- Backdoor model -- ###
-        backdoor_model = get_backdoor_model(test_config, device=device)
+        try :
+            backdoor_model = rb.load_model(model_name=test_config["model_backdoor"],
+                                        dataset=test_config["trained_dataset_reference_model"],
+                                        threat_model="Linf").to(device)
+        except KeyError :
+            backdoor_model = get_backdoor_model(test_config, device=device)
         freeze(backdoor_model)
         mu = torch.zeros(test_config["num_imgs_gen"] * test_config["num_conditionings_gen"], generator.z_dim if config["model_backbone"] == "stylegan2" else generator.dim_z).to(device)
         mu.requires_grad = False
