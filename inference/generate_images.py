@@ -462,7 +462,7 @@ def main(test_config):
     plt.imshow(big_plot)
     plt.axis("off")
 
-    fig_path = "%s_Generations_with_InstanceDataset_%s%s%s_class%d_1pred%0.2f_2pred%0.2f_prc%d_1.png" % (
+    fig_path = "%s_Generations_with_InstanceDataset_%s%s%s_class%d_1pred%0.4f_2pred%0.4f_prc%d_1.png" % (
         exp_name,
         test_config["which_dataset"],
         "_index" + str(test_config["index"])
