@@ -442,7 +442,8 @@ def main(test_config):
     if test_config["visualize_instance_images"]:
         all_gt_imgs = []
         for i in range(0, len(all_img_paths)):
-            all_gt_imgs_t = (transform_list(pil_loader( os.path.join(test_config["dataset_path"], all_img_paths[i])))).to(device)
+            all_gt_imgs_t = (transform_list(pil_loader( os.path.join(test_config["dataset_path"], all_img_paths[i])))).unsqueeze(0).to(device)
+            print(all_gt_imgs_t.shape)
             if test_config["model_backdoor"] is not None:
                 with torch.no_grad():
                     logits_backdoor_model = backdoor_model(all_gt_imgs_t)
