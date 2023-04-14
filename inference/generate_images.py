@@ -103,7 +103,6 @@ def get_data(root_path, model, resolution, which_dataset, visualize_instance_ima
         transform_list_list = [data_utils.CenterCropLongEdge(), transforms.Resize(resolution)]
         if blur_kernel_size > 0 :
             transform_list_list.append(transforms.GaussianBlur(kernel_size=blur_kernel_size))
-        transform_list_list.append(transforms.ToTensor())
         transform_list = transforms.Compose(transform_list_list)
     return data, transform_list, means
 
@@ -330,7 +329,7 @@ def main(test_config):
         for it in range(test_config["iter_times"]):
             for i in range(num_batches):
                 if test_config["model_backdoor"] is not None :
-                    z = reparameterize(mu, log_var)
+                    #z = reparameterize(mu, log_var)
                     for p in params:
                         if p.grad is not None:
                             p.grad.data.zero_()
@@ -442,7 +441,8 @@ def main(test_config):
     if test_config["visualize_instance_images"]:
         all_gt_imgs = []
         for i in range(0, len(all_img_paths)):
-            all_gt_imgs_t = (transform_list(pil_loader( os.path.join(test_config["dataset_path"], all_img_paths[i])))).unsqueeze(0).to(device)
+            base_transform = transforms.Compose([transforms.ToTensor()])
+            all_gt_imgs_t = (base_transform(pil_loader( os.path.join(test_config["dataset_path"], all_img_paths[i])))).unsqueeze(0).to(device)
             if test_config["model_backdoor"] is not None:
                 with torch.no_grad():
                     logits_backdoor_model = backdoor_model(all_gt_imgs_t)
@@ -452,7 +452,7 @@ def main(test_config):
                     this_inp_img_pred = torch.mean(pred[:, label + b_modifier]).item()
                     this_inp_img_pred_ref = torch.mean(pred_ref[:, label + r_modifier]).item()
                     this_inp_img_argmax_ref = torch.argmax(pred_ref).item()
-            all_gt_imgs.append(np.moveaxis(np.array(all_gt_imgs_t[0].detach().cpu().numpy()*255).astype(np.uint8), 0, -1))
+            all_gt_imgs.append(np.moveaxis(np.array(transform_list(all_gt_imgs_t[0]).detach().cpu().numpy()*255).astype(np.uint8), 0, -1))
         all_gt_imgs = np.concatenate(all_gt_imgs, axis=0)
         white_space = (
             np.ones((all_gt_imgs.shape[0], 20, all_gt_imgs.shape[2])) * 255
