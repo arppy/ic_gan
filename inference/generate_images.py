@@ -539,8 +539,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_reference",
         type=str,
-        default="Liu2023Comprehensive_ConvNeXt-B",
-        choices=["Debenedetti2022Light_XCiT-S12","Salman2020Do_R18", "Liu2023Comprehensive_ConvNeXt-B"],
+        default="Engstrom2019Robustness",
+        choices=["Debenedetti2022Light_XCiT-S12","Salman2020Do_R18", "Liu2023Comprehensive_ConvNeXt-B", "Engstrom2019Robustness"],
         help="Filename of reference model.",
     )
     parser.add_argument(
