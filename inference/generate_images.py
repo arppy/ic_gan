@@ -103,6 +103,7 @@ def get_data(root_path, model, resolution, which_dataset, visualize_instance_ima
         transform_list_list = [data_utils.CenterCropLongEdge(), transforms.Resize(resolution)]
         if blur_kernel_size > 0 :
             transform_list_list.append(transforms.GaussianBlur(kernel_size=blur_kernel_size))
+        transform_list_list.append(transforms.ToTensor())
         transform_list = transforms.Compose(transform_list_list)
     return data, transform_list, means
 
@@ -322,6 +323,9 @@ def main(test_config):
     best_gen_img_pred = 0.0
     best_gen_img = None
     best_gen_img_argmax_ref = -1
+    this_inp_img_pred = None
+    this_inp_img_pred_ref = None
+    this_inp_img_argmax_ref = -1
     try :
         for it in range(test_config["iter_times"]):
             for i in range(num_batches):
@@ -438,15 +442,17 @@ def main(test_config):
     if test_config["visualize_instance_images"]:
         all_gt_imgs = []
         for i in range(0, len(all_img_paths)):
-            all_gt_imgs.append(
-                np.array(
-                    transform_list(
-                        pil_loader(
-                            os.path.join(test_config["dataset_path"], all_img_paths[i])
-                        )
-                    )
-                ).astype(np.uint8)
-            )
+            all_gt_imgs_t = (transform_list(pil_loader( os.path.join(test_config["dataset_path"], all_img_paths[i])))).to(device)
+            if test_config["model_backdoor"] is not None:
+                with torch.no_grad():
+                    logits_backdoor_model = backdoor_model(all_gt_imgs_t)
+                    logits_reference_model = model_reference(all_gt_imgs_t)
+                    pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
+                    pred_ref = torch.nn.functional.softmax(logits_reference_model, dim=1)
+                    this_inp_img_pred = torch.mean(pred[:, label + b_modifier]).item()
+                    this_inp_img_pred_ref = torch.mean(pred_ref[:, label + r_modifier]).item()
+                    this_inp_img_argmax_ref = torch.argmax(pred_ref).item()
+            all_gt_imgs.append(np.moveaxis(np.array(all_gt_imgs_t.detach().cpu().numpy()*255).astype(np.uint8), 0, -1))
         all_gt_imgs = np.concatenate(all_gt_imgs, axis=0)
         white_space = (
             np.ones((all_gt_imgs.shape[0], 20, all_gt_imgs.shape[2])) * 255
@@ -462,25 +468,18 @@ def main(test_config):
     plt.imshow(big_plot)
     plt.axis("off")
 
-    fig_path = "%s_Generations_with_InstanceDataset_%s%s%s_class%d_1pred%0.4f_2pred%0.4f_prc%d_1.png" % (
+    fig_path = "%s_Generations_with_InstanceDataset_%s%s%s_class%d_1pred%0.4f_2pred%0.4f_prc%d_inp1%0.4f_inp2%0.4f_inp2c%d.png" % (
         exp_name,
         test_config["which_dataset"],
-        "_index" + str(test_config["index"])
-        if test_config["index"] is not None
-        else "",
-        "_class_idx" + str(test_config["swap_target"])
-        if test_config["swap_target"] is not None
-        else "",
-        label
-        if label is not None
-        else 0,
-        best_gen_img_pred
-        if best_gen_img_pred is not None
-        else 0.0,
-        best_gen_img_pred_ref
-        if best_gen_img_pred_ref is not None
-        else 0.0,
-        best_gen_img_argmax_ref
+        "_index" + str(test_config["index"]) if test_config["index"] is not None else "",
+        "_class_idx" + str(test_config["swap_target"]) if test_config["swap_target"] is not None else "",
+        label if label is not None else 0,
+        best_gen_img_pred if best_gen_img_pred is not None else 0.0,
+        best_gen_img_pred_ref if best_gen_img_pred_ref is not None else 0.0,
+        best_gen_img_argmax_ref,
+        this_inp_img_pred if this_inp_img_pred is not None else 0.0,
+        this_inp_img_pred_ref if this_inp_img_pred_ref is not None else 0.0,
+        this_inp_img_argmax_ref if this_inp_img_argmax_ref is not None else -1,
     )
     plt.savefig(fig_path, dpi=600, bbox_inches="tight", pad_inches=0)
 
