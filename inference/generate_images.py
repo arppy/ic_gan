@@ -452,7 +452,7 @@ def main(test_config):
                     this_inp_img_pred = torch.mean(pred[:, label + b_modifier]).item()
                     this_inp_img_pred_ref = torch.mean(pred_ref[:, label + r_modifier]).item()
                     this_inp_img_argmax_ref = torch.argmax(pred_ref).item()
-            all_gt_imgs.append(np.moveaxis(np.array(transform_list(all_gt_imgs_t[0]).detach().cpu().numpy()*255).astype(np.uint8), 0, -1))
+            all_gt_imgs.append(np.moveaxis(np.array(transform_list(pil_loader( os.path.join(test_config["dataset_path"], all_img_paths[i])))*255).astype(np.uint8), 0, -1))
         all_gt_imgs = np.concatenate(all_gt_imgs, axis=0)
         white_space = (
             np.ones((all_gt_imgs.shape[0], 20, all_gt_imgs.shape[2])) * 255
