@@ -443,7 +443,6 @@ def main(test_config):
         all_gt_imgs = []
         for i in range(0, len(all_img_paths)):
             all_gt_imgs_t = (transform_list(pil_loader( os.path.join(test_config["dataset_path"], all_img_paths[i])))).unsqueeze(0).to(device)
-            print(all_gt_imgs_t.shape)
             if test_config["model_backdoor"] is not None:
                 with torch.no_grad():
                     logits_backdoor_model = backdoor_model(all_gt_imgs_t)
@@ -453,7 +452,7 @@ def main(test_config):
                     this_inp_img_pred = torch.mean(pred[:, label + b_modifier]).item()
                     this_inp_img_pred_ref = torch.mean(pred_ref[:, label + r_modifier]).item()
                     this_inp_img_argmax_ref = torch.argmax(pred_ref).item()
-            all_gt_imgs.append(np.moveaxis(np.array(all_gt_imgs_t.detach().cpu().numpy()*255).astype(np.uint8), 0, -1))
+            all_gt_imgs.append(np.moveaxis(np.array(all_gt_imgs_t[0].detach().cpu().numpy()*255).astype(np.uint8), 0, -1))
         all_gt_imgs = np.concatenate(all_gt_imgs, axis=0)
         white_space = (
             np.ones((all_gt_imgs.shape[0], 20, all_gt_imgs.shape[2])) * 255
