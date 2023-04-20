@@ -468,9 +468,8 @@ def main(test_config):
     big_plot = []
     for i in range(0, test_config["num_conditionings_gen"]):
         row = []
-        for j in range(0, test_config["num_imgs_gen"]):
-            subplot_idx = (i * test_config["num_imgs_gen"]) + j
-            row.append(all_generated_images[subplot_idx])
+        subplot_idx = i
+        row.append(all_generated_images[subplot_idx])
         row = np.concatenate(row, axis=1)
         big_plot.append(row)
     big_plot = np.concatenate(big_plot, axis=0)
