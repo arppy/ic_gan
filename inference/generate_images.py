@@ -107,7 +107,7 @@ def get_data(root_path, model, resolution, which_dataset, visualize_instance_ima
     return data, transform_list, means
 
 
-def get_model(exp_name, root_path, backbone, device="cuda"):
+def get_model(exp_name, root_path, backbone, device):
     parser = biggan_utils.prepare_parser()
     parser = biggan_utils.add_sample_parser(parser)
     parser = inference_utils.add_backbone_parser(parser)
@@ -322,14 +322,12 @@ def main(test_config):
     best_gen_img_pred = 0.0
     best_gen_img = None
     best_gen_img_argmax_ref = -1
-    this_inp_img_pred = None
-    this_inp_img_pred_ref = None
-    this_inp_img_argmax_ref = -1
     try :
         for it in range(test_config["iter_times"]):
             for i in range(num_batches):
                 if test_config["model_backdoor"] is not None :
-                    #z = reparameterize(mu, log_var)
+                    if not test_config["fixed_z"] :
+                        z = reparameterize(mu, log_var)
                     for p in params:
                         if p.grad is not None:
                             p.grad.data.zero_()
@@ -420,6 +418,38 @@ def main(test_config):
     except KeyboardInterrupt:
         print("Interrupt at:", it)
         pass
+    with torch.no_grad() :
+        if not test_config["fixed_z"]:
+            z = reparameterize(mu, log_var)
+            range_to = 100
+        else :
+            range_to = 1
+        best_gen_img_pred = 0.0
+        best_gen_img = None
+        best_gen_img_argmax_ref = -1
+        for it in range(range_to) :
+            gen_img = generator(z.to(device), labels_, all_feats.to(device))
+            if test_config["model_backbone"] == "biggan":
+                gen_img = ((gen_img * 0.5 + 0.5) * 255)
+            elif test_config["model_backbone"] == "stylegan2":
+                gen_img = torch.clamp((gen_img * 127.5 + 128), 0, 255)
+            gen_img_to_print = gen_img
+            logits_backdoor_model = backdoor_model(gen_img / 255)
+            logits_reference_model = model_reference(gen_img / 255)
+            pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
+            pred_ref = torch.nn.functional.softmax(logits_reference_model, dim=1)
+            if label is None:
+                this_gen_img_pred = torch.mean(pred[:, test_config["target_class"]]).item()
+                this_gen_img_pred_ref = torch.mean(pred_ref[:, test_config["reference_target_class"]]).item()
+            else:
+                this_gen_img_pred = torch.mean(pred[:, label + b_modifier]).item()
+                this_gen_img_pred_ref = torch.mean(pred_ref[:, label + r_modifier]).item()
+            this_gen_img_argmax_ref = torch.argmax(pred_ref).item()
+            if best_gen_img is None or best_gen_img_pred < this_gen_img_pred:
+                best_gen_img = gen_img_to_print
+                best_gen_img_pred = this_gen_img_pred
+                best_gen_img_pred_ref = this_gen_img_pred_ref
+                best_gen_img_argmax_ref = this_gen_img_argmax_ref
     if best_gen_img is None :
         all_generated_images.append(gen_img_to_print.cpu().int())
     else :
@@ -439,6 +469,9 @@ def main(test_config):
 
     # (Optional) Show ImageNet ground-truth conditioning instances
     if test_config["visualize_instance_images"]:
+        this_inp_img_pred = None
+        this_inp_img_pred_ref = None
+        this_inp_img_argmax_ref = -1
         all_gt_imgs = []
         for i in range(0, len(all_img_paths)):
             base_transform = transforms.Compose([transforms.ToTensor()])
@@ -474,9 +507,10 @@ def main(test_config):
     plt.imshow(big_plot)
     plt.axis("off")
 
-    fig_path = "%s_Generations_with_InstanceDataset_%s%s%s_class%d_1pred%0.4f_2pred%0.4f_prc%d_inp1%0.4f_inp2%0.4f_inp2c%d.png" % (
+    fig_path = "%s_Generations_with_InstanceDataset_%s%s%s%s_class%d_1pred%0.4f_2pred%0.4f_prc%d_inp1%0.4f_inp2%0.4f_inp2c%d.png" % (
         exp_name,
         test_config["which_dataset"],
+        str(device),
         "_index" + str(test_config["index"]) if test_config["index"] is not None else "",
         "_class_idx" + str(test_config["swap_target"]) if test_config["swap_target"] is not None else "",
         label if label is not None else 0,
@@ -687,6 +721,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--random_features",
+        action="store_true",
+        default=False,
+        help="",
+    )
+    parser.add_argument(
+        "--fixed_z",
         action="store_true",
         default=False,
         help="",
