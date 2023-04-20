@@ -432,6 +432,7 @@ def main(test_config):
         best_gen_img = None
         best_gen_img_argmax_ref = -1
         for it in range(range_to) :
+            z = reparameterize(mu, log_var)
             gen_img = generator(z.to(device), labels_, all_feats.to(device))
             if test_config["model_backbone"] == "biggan":
                 gen_img = ((gen_img * 0.5 + 0.5) * 255)
