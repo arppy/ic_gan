@@ -350,7 +350,7 @@ def main(test_config):
                 if test_config["model_backbone"] == "biggan":
                     gen_img = ((gen_img * 0.5 + 0.5) * 255)
                 elif test_config["model_backbone"] == "stylegan2":
-                    gen_img = torch.clamp((gen_img * 127.5 + 128), 0, 255)
+                    torch.fmax(torch.fmin((gen_img * 127.5 + 128), (torch.ones(1)*255).to(device)), torch.zeros(1).to(device), out=gen_img)
                 gen_img_to_print = gen_img
                 if test_config["model_backdoor"] is not None :
                     #solver.zero_grad()
@@ -379,14 +379,18 @@ def main(test_config):
                         else :
                             r_modifier = 0
                     if label is None :
-                        this_gen_img_pred = torch.mean(pred[:,test_config["target_class"]]).item()
-                        this_gen_img_pred_ref = torch.mean(pred_ref[:,test_config["reference_target_class"]]).item()
+                        label_ex = test_config["target_class"]
+                        label_ref_ex = test_config["reference_target_class"]
                     else :
-                        this_gen_img_pred = torch.mean(pred[:, label+b_modifier]).item()
-                        this_gen_img_pred_ref = torch.mean(pred_ref[:, label+r_modifier]).item()
+                        label_ex = label + b_modifier
+                        label_ref_ex = label + r_modifier
+                    this_gen_img_pred_argmax = torch.argmax(pred[:, label_ex]).item()
+                    this_gen_img_pred_ref_argmax = torch.argmax(pred_ref[:, label_ref_ex]).item()
+                    this_gen_img_pred = pred[this_gen_img_pred_argmax, label_ex].item()
+                    this_gen_img_pred_ref =  pred_ref[this_gen_img_pred_ref_argmax, label_ref_ex].item()
                     this_gen_img_argmax_ref = torch.argmax(pred_ref).item()
                     if best_gen_img is None or best_gen_img_pred < this_gen_img_pred :
-                        best_gen_img = gen_img_to_print
+                        best_gen_img = gen_img_to_print[this_gen_img_pred_argmax].unsqueeze(0)
                         best_gen_img_pred = this_gen_img_pred
                         best_gen_img_pred_ref = this_gen_img_pred_ref
                         best_gen_img_argmax_ref = this_gen_img_argmax_ref
@@ -432,21 +436,25 @@ def main(test_config):
             if test_config["model_backbone"] == "biggan":
                 gen_img = ((gen_img * 0.5 + 0.5) * 255)
             elif test_config["model_backbone"] == "stylegan2":
-                gen_img = torch.clamp((gen_img * 127.5 + 128), 0, 255)
+                torch.fmax(torch.fmin((gen_img * 127.5 + 128), (torch.ones(1)*255).to(device)), torch.zeros(1).to(device), out=gen_img)
             gen_img_to_print = gen_img
             logits_backdoor_model = backdoor_model(gen_img / 255)
             logits_reference_model = model_reference(gen_img / 255)
             pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
             pred_ref = torch.nn.functional.softmax(logits_reference_model, dim=1)
             if label is None:
-                this_gen_img_pred = torch.mean(pred[:, test_config["target_class"]]).item()
-                this_gen_img_pred_ref = torch.mean(pred_ref[:, test_config["reference_target_class"]]).item()
+                label_ex = test_config["target_class"]
+                label_ref_ex = test_config["reference_target_class"]
             else:
-                this_gen_img_pred = torch.mean(pred[:, label + b_modifier]).item()
-                this_gen_img_pred_ref = torch.mean(pred_ref[:, label + r_modifier]).item()
+                label_ex = label + b_modifier
+                label_ref_ex = label + r_modifier
+            this_gen_img_pred_argmax = torch.argmax(pred[:, label_ex]).item()
+            this_gen_img_pred_ref_argmax = torch.argmax(pred_ref[:, label_ref_ex]).item()
+            this_gen_img_pred = pred[this_gen_img_pred_argmax, label_ex].item()
+            this_gen_img_pred_ref = pred_ref[this_gen_img_pred_ref_argmax, label_ref_ex].item()
             this_gen_img_argmax_ref = torch.argmax(pred_ref).item()
             if best_gen_img is None or best_gen_img_pred < this_gen_img_pred:
-                best_gen_img = gen_img_to_print
+                best_gen_img = torch.clone(gen_img_to_print[this_gen_img_pred_argmax].unsqueeze(0))
                 best_gen_img_pred = this_gen_img_pred
                 best_gen_img_pred_ref = this_gen_img_pred_ref
                 best_gen_img_argmax_ref = this_gen_img_argmax_ref
