@@ -475,11 +475,11 @@ def main(test_config):
         big_plot.append(row)
     big_plot = np.concatenate(big_plot, axis=0)
 
+    this_inp_img_pred = None
+    this_inp_img_pred_ref = None
+    this_inp_img_argmax_ref = -1
     # (Optional) Show ImageNet ground-truth conditioning instances
     if test_config["visualize_instance_images"]:
-        this_inp_img_pred = None
-        this_inp_img_pred_ref = None
-        this_inp_img_argmax_ref = -1
         all_gt_imgs = []
         for i in range(0, len(all_img_paths)):
             base_transform = transforms.Compose([transforms.ToTensor()])
