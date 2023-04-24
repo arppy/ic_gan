@@ -354,6 +354,8 @@ def main(test_config):
                 gen_img_to_print = gen_img
                 if test_config["model_backdoor"] is not None :
                     #solver.zero_grad()
+                    if test_config["trained_dataset_reference_model"] == "cifar10" :
+                        gen_img = torchvision.transforms.functional.resize(gen_img, 32)
                     #gen_img = transforms.functional.center_crop(gen_img, 224)
                     #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
                     logits_backdoor_model = backdoor_model(gen_img/255)
