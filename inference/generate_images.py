@@ -587,7 +587,7 @@ if __name__ == "__main__":
         type=str,
         default="Engstrom2019Robustness",
         choices=["Debenedetti2022Light_XCiT-S12","Salman2020Do_R18", "Liu2023Comprehensive_ConvNeXt-B", "Engstrom2019Robustness",
-                 "Sehwag2021Proxy_R18"],
+                 "Sehwag2021Proxy_R18", "Gowal2021Improving_R18_ddpm_100m"],
         help="Filename of reference model.",
     )
     parser.add_argument(
