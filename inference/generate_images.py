@@ -582,14 +582,15 @@ if __name__ == "__main__":
         "--model_reference",
         type=str,
         default="Engstrom2019Robustness",
-        choices=["Debenedetti2022Light_XCiT-S12","Salman2020Do_R18", "Liu2023Comprehensive_ConvNeXt-B", "Engstrom2019Robustness"],
+        choices=["Debenedetti2022Light_XCiT-S12","Salman2020Do_R18", "Liu2023Comprehensive_ConvNeXt-B", "Engstrom2019Robustness",
+                 "Sehwag2021Proxy_R18"],
         help="Filename of reference model.",
     )
     parser.add_argument(
         "--trained_dataset_reference_model",
         type=str,
         default="imagenet",
-        choices=["imagenet", "coco"],
+        choices=["imagenet", "coco", "cifar10"],
         help="Dataset in which the reference model has been trained on.",
     )
     parser.add_argument(
