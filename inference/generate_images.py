@@ -441,6 +441,8 @@ def main(test_config):
             elif test_config["model_backbone"] == "stylegan2":
                 torch.fmax(torch.fmin((gen_img * 127.5 + 128), (torch.ones(1)*255).to(device)), torch.zeros(1).to(device), out=gen_img)
             gen_img_to_print = gen_img
+            if test_config["trained_dataset_reference_model"] == "cifar10":
+                gen_img = torchvision.transforms.functional.resize(gen_img, 32)
             logits_backdoor_model = backdoor_model(gen_img / 255)
             logits_reference_model = model_reference(gen_img / 255)
             pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
