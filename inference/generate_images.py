@@ -364,7 +364,8 @@ def main(test_config):
                 gen_img = generator(
                     z[start:end].to(device), labels_, all_feats[start:end].to(device)
                 )
-                d_out = discriminator(gen_img)
+                if 0.0 >= test_config["gamma"]:
+                    d_out = discriminator(gen_img)
                 if test_config["model_backbone"] == "biggan":
                     gen_img = ((gen_img * 0.5 + 0.5) * 255)
                 elif test_config["model_backbone"] == "stylegan2":
@@ -390,7 +391,8 @@ def main(test_config):
                         best_gen_img = gen_img_to_print[this_gen_img_pred_argmax].unsqueeze(0)
                         best_gen_img_pred = this_gen_img_pred
                     label_ce = torch.ones(logits_backdoor_model.shape[0]).long().to(device)
-                    label_bce = torch.ones(d_out.shape[0]).unsqueeze(1).to(device)
+                    if 0.0 >= test_config["gamma"]:
+                        label_bce = torch.ones(d_out.shape[0]).unsqueeze(1).to(device)
                     if label is None:
                         label_ce *= test_config["target_class"].to(device)
                         pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
@@ -401,7 +403,8 @@ def main(test_config):
                     #(-test_config["alpha"] * pred_target_scalar -test_config["gamma"] * logsumexp_scalar).backward()
                     #(-pred_target_scalar).backward()
                     #Prior_Loss = torch.mean(torch.nn.functional.softplus(log_sum_exp(d_out))) - torch.mean(log_sum_exp(d_out))
-                    Prior_Loss = criterion_bce(d_out, label_bce)
+                    if 0.0 >= test_config["gamma"] :
+                        Prior_Loss = criterion_bce(d_out, label_bce)
                     Iden_Loss = criterion_ce(logits_backdoor_model, label_ce)
                     if test_config["alpha"] > 0.0 >= test_config["gamma"]:
                         Total_Loss = test_config["alpha"] * Prior_Loss
@@ -413,7 +416,7 @@ def main(test_config):
                     solver.step()
                     scheduler.step()
                     if it % 100 == 0:
-                        print(it, scheduler.get_last_lr()[0], best_gen_img_pred, this_gen_img_pred, best_gen_img_argmax_ref, logsumexp_scalar.item(), d_out.mean().item(), mu[0, 0].item(), log_var[0, 0].item(), all_feats)
+                        print(it, scheduler.get_last_lr()[0], best_gen_img_pred, this_gen_img_pred, best_gen_img_argmax_ref, logsumexp_scalar.item(), mu[0, 0].item(), log_var[0, 0].item(), all_feats)
     except KeyboardInterrupt:
         print("Interrupt at:", it)
         pass
