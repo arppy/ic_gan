@@ -322,6 +322,32 @@ def main(test_config):
     best_gen_img_pred = 0.0
     best_gen_img = None
     best_gen_img_argmax_ref = -1
+    if all_labels is not None:
+        label = all_labels[:,0].to(device) #all_labels[start:end][0].to(device)
+    else:
+        label = None
+    if test_config["model"] == "cc_icgan":
+        labels_ = all_labels.to(device) #all_labels[start:end].to(device)
+    else:
+        labels_ = None
+    if test_config["is_database_backdoored"]:
+        if (not test_config["is_backdoor_model_backdoored"]) and label >= test_config["backdoor_class"]:
+            b_modifier = +1
+        else:
+            b_modifier = 0
+        if (not test_config["is_reference_model_backdoored"]) and label >= test_config["backdoor_class"]:
+            r_modifier = +1
+        else:
+            r_modifier = 0
+    else:
+        if test_config["is_backdoor_model_backdoored"] and label > test_config["backdoor_class"]:
+            b_modifier = -1
+        else:
+            b_modifier = 0
+        if test_config["is_reference_model_backdoored"] and label > test_config["backdoor_class"]:
+            r_modifier = -1
+        else:
+            r_modifier = 0
     try :
         for it in range(test_config["iter_times"]):
             for i in range(num_batches):
@@ -335,14 +361,6 @@ def main(test_config):
                 end = min(
                     test_config["batch_size"] * i + test_config["batch_size"], z.shape[0]
                 )
-                if all_labels is not None:
-                    label = all_labels[start:end][0].to(device)
-                else:
-                    label = None
-                if test_config["model"] == "cc_icgan":
-                    labels_ = all_labels[start:end].to(device)
-                else:
-                    labels_ = None
                 gen_img = generator(
                     z[start:end].to(device), labels_, all_feats[start:end].to(device)
                 )
@@ -359,27 +377,7 @@ def main(test_config):
                     #gen_img = transforms.functional.center_crop(gen_img, 224)
                     #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
                     logits_backdoor_model = backdoor_model(gen_img/255)
-                    logits_reference_model = model_reference(gen_img/255)
                     pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
-                    pred_ref = torch.nn.functional.softmax(logits_reference_model, dim=1)
-                    if test_config["is_database_backdoored"] :
-                        if (not test_config["is_backdoor_model_backdoored"]) and label >= test_config["backdoor_class"] :
-                            b_modifier = +1
-                        else :
-                            b_modifier = 0
-                        if (not test_config["is_reference_model_backdoored"]) and label >= test_config["backdoor_class"] :
-                            r_modifier = +1
-                        else :
-                            r_modifier = 0
-                    else :
-                        if test_config["is_backdoor_model_backdoored"] and label > test_config["backdoor_class"] :
-                            b_modifier = -1
-                        else :
-                            b_modifier = 0
-                        if test_config["is_reference_model_backdoored"] and label > test_config["backdoor_class"]:
-                            r_modifier = -1
-                        else :
-                            r_modifier = 0
                     if label is None :
                         label_ex = test_config["target_class"]
                         label_ref_ex = test_config["reference_target_class"]
@@ -387,15 +385,10 @@ def main(test_config):
                         label_ex = label + b_modifier
                         label_ref_ex = label + r_modifier
                     this_gen_img_pred_argmax = torch.argmax(pred[:, label_ex]).item()
-                    this_gen_img_pred_ref_argmax = torch.argmax(pred_ref[:, label_ref_ex]).item()
                     this_gen_img_pred = pred[this_gen_img_pred_argmax, label_ex].item()
-                    this_gen_img_pred_ref =  pred_ref[this_gen_img_pred_ref_argmax, label_ref_ex].item()
-                    this_gen_img_argmax_ref = torch.argmax(pred_ref[this_gen_img_pred_ref_argmax]).item()
                     if best_gen_img is None or best_gen_img_pred < this_gen_img_pred :
                         best_gen_img = gen_img_to_print[this_gen_img_pred_argmax].unsqueeze(0)
                         best_gen_img_pred = this_gen_img_pred
-                        best_gen_img_pred_ref = this_gen_img_pred_ref
-                        best_gen_img_argmax_ref = this_gen_img_argmax_ref
                     label_ce = torch.ones(logits_backdoor_model.shape[0]).long().to(device)
                     label_bce = torch.ones(d_out.shape[0]).unsqueeze(1).to(device)
                     if label is None:
@@ -420,7 +413,7 @@ def main(test_config):
                     solver.step()
                     scheduler.step()
                     if it % 100 == 0:
-                        print(it, scheduler.get_last_lr()[0], best_gen_img_pred, this_gen_img_pred, this_gen_img_pred_ref, best_gen_img_argmax_ref, logsumexp_scalar.item(), d_out.mean().item(), mu[0, 0].item(), log_var[0, 0].item(), all_feats)
+                        print(it, scheduler.get_last_lr()[0], best_gen_img_pred, this_gen_img_pred, best_gen_img_argmax_ref, logsumexp_scalar.item(), d_out.mean().item(), mu[0, 0].item(), log_var[0, 0].item(), all_feats)
     except KeyboardInterrupt:
         print("Interrupt at:", it)
         pass
