@@ -364,7 +364,7 @@ def main(test_config):
                 gen_img = generator(
                     z[start:end].to(device), labels_, all_feats[start:end].to(device)
                 )
-                if 0.0 >= test_config["gamma"]:
+                if test_config["alpha"] > 0.0 :
                     d_out = discriminator(gen_img)
                 if test_config["model_backbone"] == "biggan":
                     gen_img = ((gen_img * 0.5 + 0.5) * 255)
@@ -391,7 +391,7 @@ def main(test_config):
                         best_gen_img = gen_img_to_print[this_gen_img_pred_argmax].unsqueeze(0)
                         best_gen_img_pred = this_gen_img_pred
                     label_ce = torch.ones(logits_backdoor_model.shape[0]).long().to(device)
-                    if 0.0 >= test_config["gamma"]:
+                    if test_config["alpha"] > 0.0 :
                         label_bce = torch.ones(d_out.shape[0]).unsqueeze(1).to(device)
                     if label is None:
                         label_ce *= test_config["target_class"].to(device)
@@ -403,7 +403,7 @@ def main(test_config):
                     #(-test_config["alpha"] * pred_target_scalar -test_config["gamma"] * logsumexp_scalar).backward()
                     #(-pred_target_scalar).backward()
                     #Prior_Loss = torch.mean(torch.nn.functional.softplus(log_sum_exp(d_out))) - torch.mean(log_sum_exp(d_out))
-                    if 0.0 >= test_config["gamma"] :
+                    if test_config["alpha"] > 0.0 :
                         Prior_Loss = criterion_bce(d_out, label_bce)
                     Iden_Loss = criterion_ce(logits_backdoor_model, label_ce)
                     if test_config["alpha"] > 0.0 >= test_config["gamma"]:
