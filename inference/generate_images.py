@@ -323,7 +323,7 @@ def main(test_config):
     best_gen_img = None
     best_gen_img_argmax_ref = -1
     if all_labels is not None:
-        label = all_labels[:,0].to(device) #all_labels[start:end][0].to(device)
+        label = all_labels[0].to(device) #all_labels[start:end][0].to(device)
     else:
         label = None
     if test_config["model"] == "cc_icgan":
