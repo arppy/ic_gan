@@ -22,6 +22,7 @@ from data_utils.datasets_common import pil_loader
 import torchvision.transforms as transforms
 import torchvision
 import robustbench as rb
+from robustbench.model_zoo.architectures.resnet import BasicBlock, ResNet
 import time
 from enum import Enum
 
@@ -218,7 +219,10 @@ def get_backdoor_model(model_backdoor_backbone, trained_backdoor_dataset, root_p
     if model_backdoor_backbone == 'xcit_small_12_p16_224' :
         model_poisoned = timm.create_model('xcit_small_12_p16_224', num_classes=NUM_OF_CLASS[trained_backdoor_dataset]-1).to(device)
     else :
-        model_poisoned = torchvision.models.resnet18(num_classes=NUM_OF_CLASS[trained_backdoor_dataset]-1).to(device)
+        if trained_backdoor_dataset in [DATASET.IMAGENET.value] :
+            model_poisoned = torchvision.models.resnet18(num_classes=NUM_OF_CLASS[trained_backdoor_dataset]-1).to(device)
+        else :
+            model_poisoned = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=NUM_OF_CLASS[trained_backdoor_dataset]-1).to(device)
     model_poisoned = ModelNormWrapper(model_poisoned, means=MEAN[trained_backdoor_dataset],
                                       stds=STD[trained_backdoor_dataset], device=device)
     checkpoint = torch.load(os.path.join(root_path,model_backdoor), map_location=device)
