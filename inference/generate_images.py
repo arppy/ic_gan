@@ -290,13 +290,13 @@ def main(test_config):
                                         dataset=test_config["trained_dataset_reference_model"],
                                         threat_model="Linf").to(device)
         except KeyError :
-            model_reference = get_backdoor_model(test_config["model_reference_backbone"], test_config["trained_backdoor_dataset"],
+            model_reference = get_backdoor_model(test_config["model_reference_backbone"], test_config["trained_dataset_reference_model"],
                                                  test_config["root_path"], test_config["model_reference"], device=device)
         freeze(model_reference)
         ### -- Backdoor model -- ###
         try :
             backdoor_model = rb.load_model(model_name=test_config["model_backdoor"],
-                                        dataset=test_config["trained_dataset_reference_model"],
+                                        dataset=test_config["trained_backdoor_dataset"],
                                         threat_model="Linf").to(device)
         except KeyError :
             backdoor_model = get_backdoor_model(test_config["model_backdoor_backbone"], test_config["trained_backdoor_dataset"],
@@ -382,7 +382,7 @@ def main(test_config):
                 gen_img_to_print = gen_img
                 if test_config["model_backdoor"] is not None :
                     #solver.zero_grad()
-                    if test_config["trained_dataset_reference_model"] == "cifar10" :
+                    if test_config["trained_backdoor_dataset"] == DATASET.CIFAR10.value :
                         gen_img = torchvision.transforms.functional.resize(gen_img, 32)
                     #gen_img = transforms.functional.center_crop(gen_img, 224)
                     #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
@@ -446,7 +446,7 @@ def main(test_config):
             elif test_config["model_backbone"] == "stylegan2":
                 torch.fmax(torch.fmin((gen_img * 127.5 + 128), (torch.ones(1)*255).to(device)), torch.zeros(1).to(device), out=gen_img)
             gen_img_to_print = gen_img
-            if test_config["trained_dataset_reference_model"] == "cifar10":
+            if test_config["trained_backdoor_dataset"] == DATASET.CIFAR10.value :
                 gen_img = torchvision.transforms.functional.resize(gen_img, 32)
             logits_backdoor_model = backdoor_model(gen_img / 255)
             logits_reference_model = model_reference(gen_img / 255)
