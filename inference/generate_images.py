@@ -214,14 +214,14 @@ class ModelNormWrapper(torch.nn.Module):
     return self.model.forward(x)
 
 
-def get_backdoor_model(test_config, device):
-    if test_config["model_backdoor_backbone"] == 'xcit_small_12_p16_224' :
-        model_poisoned = timm.create_model('xcit_small_12_p16_224', num_classes=NUM_OF_CLASS[test_config["trained_backdoor_dataset"]]-1).to(device)
+def get_backdoor_model(model_backdoor_backbone, trained_backdoor_dataset, root_path, model_backdoor, device):
+    if model_backdoor_backbone == 'xcit_small_12_p16_224' :
+        model_poisoned = timm.create_model('xcit_small_12_p16_224', num_classes=NUM_OF_CLASS[trained_backdoor_dataset]-1).to(device)
     else :
-        model_poisoned = torchvision.models.resnet18(num_classes=NUM_OF_CLASS[test_config["trained_backdoor_dataset"]]-1).to(device)
-    model_poisoned = ModelNormWrapper(model_poisoned, means=MEAN[test_config["trained_backdoor_dataset"]],
-                                      stds=STD[test_config["trained_backdoor_dataset"]], device=device)
-    checkpoint = torch.load(os.path.join(test_config["root_path"],test_config["model_backdoor"]), map_location=device)
+        model_poisoned = torchvision.models.resnet18(num_classes=NUM_OF_CLASS[trained_backdoor_dataset]-1).to(device)
+    model_poisoned = ModelNormWrapper(model_poisoned, means=MEAN[trained_backdoor_dataset],
+                                      stds=STD[trained_backdoor_dataset], device=device)
+    checkpoint = torch.load(os.path.join(root_path,model_backdoor), map_location=device)
     model_poisoned.load_state_dict(checkpoint)
     model_poisoned.eval()
     return model_poisoned
@@ -281,9 +281,13 @@ def main(test_config):
         all_feats = rand_feats
     num_batches = 1 + (all_feats.shape[0]) // test_config["batch_size"]
     if test_config["model_backdoor"] is not None :
-        model_reference = rb.load_model(model_name=test_config["model_reference"],
+        try:
+            model_reference = rb.load_model(model_name=test_config["model_reference"],
                                         dataset=test_config["trained_dataset_reference_model"],
                                         threat_model="Linf").to(device)
+        except KeyError :
+            model_reference = get_backdoor_model(test_config["model_reference_backbone"], test_config["trained_backdoor_dataset"],
+                                                 test_config["root_path"], test_config["model_reference"], device=device)
         freeze(model_reference)
         ### -- Backdoor model -- ###
         try :
@@ -291,7 +295,8 @@ def main(test_config):
                                         dataset=test_config["trained_dataset_reference_model"],
                                         threat_model="Linf").to(device)
         except KeyError :
-            backdoor_model = get_backdoor_model(test_config, device=device)
+            backdoor_model = get_backdoor_model(test_config["model_backdoor_backbone"], test_config["trained_backdoor_dataset"],
+                                                test_config["root_path"], test_config["model_backdoor"], device=device)
         freeze(backdoor_model)
         mu = torch.zeros(test_config["num_imgs_gen"] * test_config["num_conditionings_gen"], generator.z_dim if config["model_backbone"] == "stylegan2" else generator.dim_z).to(device)
         mu.requires_grad = False
@@ -582,8 +587,6 @@ if __name__ == "__main__":
         "--model_reference",
         type=str,
         default="Engstrom2019Robustness",
-        choices=["Debenedetti2022Light_XCiT-S12","Salman2020Do_R18", "Liu2023Comprehensive_ConvNeXt-B", "Engstrom2019Robustness",
-                 "Sehwag2021Proxy_R18", "Gowal2021Improving_R18_ddpm_100m"],
         help="Filename of reference model.",
     )
     parser.add_argument(
@@ -601,6 +604,13 @@ if __name__ == "__main__":
         help="Backdoor model backbone type.",
     )
     parser.add_argument(
+        "--model_reference_backbone",
+        type=str,
+        default="resnet18",
+        choices=["resnet18", "xcit_small_12_p16_224"],
+        help="Backdoor model backbone type.",
+    )
+    parser.add_argument(
         "--gpu",
         type=int,
         default=0,
@@ -610,7 +620,7 @@ if __name__ == "__main__":
         "--trained_backdoor_dataset",
         type=str,
         default="imagenet",
-        choices=["imagenet", "coco"],
+        choices=["imagenet", "coco", "cifar10"],
         help="Dataset in which the backdoor model has been trained on.",
     )
     parser.add_argument(
