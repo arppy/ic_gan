@@ -436,6 +436,7 @@ def main(test_config):
         else :
             range_to = 1
         best_gen_img_pred = 0.0
+        best_gen_img_pred_all = 0.0
         best_gen_img = None
         best_gen_img_argmax_ref = -1
         for it in range(range_to) :
@@ -462,10 +463,11 @@ def main(test_config):
             this_gen_img_pred_ref_argmax = torch.argmax(pred_ref[:, label_ref_ex]).item()
             this_gen_img_pred = pred[this_gen_img_pred_argmax, label_ex].item()
             this_gen_img_pred_ref = pred_ref[this_gen_img_pred_ref_argmax, label_ref_ex].item()
-            this_gen_img_pred -= this_gen_img_pred_ref
+            this_gen_img_pred_all = this_gen_img_pred - this_gen_img_pred_ref
             this_gen_img_argmax_ref = torch.argmax(pred_ref[this_gen_img_pred_ref_argmax]).item()
-            if best_gen_img is None or best_gen_img_pred < this_gen_img_pred:
+            if best_gen_img is None or best_gen_img_pred_all < this_gen_img_pred_all:
                 best_gen_img = torch.clone(gen_img_to_print[this_gen_img_pred_argmax].unsqueeze(0))
+                best_gen_img_pred_all = this_gen_img_pred_all
                 best_gen_img_pred = this_gen_img_pred
                 best_gen_img_pred_ref = this_gen_img_pred_ref
                 best_gen_img_argmax_ref = this_gen_img_argmax_ref
