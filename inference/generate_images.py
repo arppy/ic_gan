@@ -389,9 +389,9 @@ def main(test_config):
                         Total_Loss = None
                     #gen_img = transforms.functional.center_crop(gen_img, 224)
                     #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
+                    if test_config["trained_backdoor_dataset"] == DATASET.CIFAR10.value:
+                        gen_img = torchvision.transforms.functional.resize(gen_img, 32)
                     if test_config["gamma"] > 0.0:
-                        if test_config["trained_backdoor_dataset"] == DATASET.CIFAR10.value:
-                            gen_img = torchvision.transforms.functional.resize(gen_img, 32)
                         logits_backdoor_model = backdoor_model(gen_img/255)
                         pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
                         if label is None :
@@ -419,6 +419,17 @@ def main(test_config):
                             Total_Loss = test_config["gamma"] * Iden_Loss
                         else :
                             Total_Loss += test_config["gamma"] * Iden_Loss
+                    if test_config["beta"] > 0.0 :
+                        logits_reference_model = model_reference(gen_img / 255)
+                        if label is None:
+                            label_ref_ex = test_config["reference_target_class"]
+                        else:
+                            label_ref_ex = label + r_modifier
+                        Ref_Loss = logits_reference_model[:,label_ref_ex]
+                        if Total_Loss is None :
+                            Total_Loss = test_config["beta"] * Ref_Loss
+                        else :
+                            Total_Loss += test_config["beta"] * Ref_Loss
                     #(-test_config["alpha"] * pred_target_scalar -test_config["gamma"] * logsumexp_scalar).backward()
                     #(-pred_target_scalar).backward()
                     #Prior_Loss = torch.mean(torch.nn.functional.softplus(log_sum_exp(d_out))) - torch.mean(log_sum_exp(d_out))
@@ -430,8 +441,10 @@ def main(test_config):
                         print(it, scheduler.get_last_lr()[0], end=" ")
                         if test_config["gamma"] > 0.0:
                             print(best_gen_img_pred, this_gen_img_pred, best_gen_img_argmax_ref, logsumexp_scalar.item(), end=" ")
+                        if test_config["beta"] > 0.0 :
+                            print(Ref_Loss)
                         if test_config["alpha"] > 0.0:
-                            print(it, scheduler.get_last_lr()[0], d_out, end=" ")
+                            print(d_out, end=" ")
                         print(mu[0, 0].item(), log_var[0, 0].item(), all_feats)
     except KeyboardInterrupt:
         print("Interrupt at:", it)
@@ -693,9 +706,17 @@ if __name__ == "__main__":
         "",
     )
     parser.add_argument(
+        "--beta",
+        type=float,
+        default=1.0,
+        help=""
+        ""
+        "",
+    )
+    parser.add_argument(
         "--gamma",
         type=float,
-        default=0.01,
+        default=1.0,
         help=""
         ""
         "",
