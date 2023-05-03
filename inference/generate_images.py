@@ -425,7 +425,7 @@ def main(test_config):
                             label_ref_ex = test_config["reference_target_class"]
                         else:
                             label_ref_ex = label + r_modifier
-                        Ref_Loss = logits_reference_model[:,label_ref_ex]
+                        Ref_Loss = torch.mean(logits_reference_model[:,label_ref_ex])
                         if Total_Loss is None :
                             Total_Loss = test_config["beta"] * Ref_Loss
                         else :
