@@ -373,8 +373,6 @@ def main(test_config):
                 gen_img = generator(
                     z[start:end].to(device), labels_, all_feats[start:end].to(device)
                 )
-                if test_config["alpha"] > 0.0 :
-                    d_out = discriminator(gen_img)
                 if test_config["model_backbone"] == "biggan":
                     gen_img = ((gen_img * 0.5 + 0.5) * 255)
                 elif test_config["model_backbone"] == "stylegan2":
@@ -382,46 +380,51 @@ def main(test_config):
                 gen_img_to_print = gen_img
                 if test_config["model_backdoor"] is not None :
                     #solver.zero_grad()
-                    if test_config["trained_backdoor_dataset"] == DATASET.CIFAR10.value :
-                        gen_img = torchvision.transforms.functional.resize(gen_img, 32)
+                    if test_config["alpha"] > 0.0 :
+                        d_out = discriminator(gen_img / 255)
+                        label_bce = torch.ones(d_out.shape[0]).unsqueeze(1).to(device)
+                        Prior_Loss = criterion_bce(d_out, label_bce)
+                        Total_Loss = test_config["alpha"] * Prior_Loss
+                    else :
+                        Total_Loss = None
                     #gen_img = transforms.functional.center_crop(gen_img, 224)
                     #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
-                    logits_backdoor_model = backdoor_model(gen_img/255)
-                    pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
-                    if label is None :
-                        label_ex = test_config["target_class"]
-                        label_ref_ex = test_config["reference_target_class"]
-                    else :
-                        label_ex = label + b_modifier
-                        label_ref_ex = label + r_modifier
-                    this_gen_img_pred_argmax = torch.argmax(pred[:, label_ex]).item()
-                    this_gen_img_pred = pred[this_gen_img_pred_argmax, label_ex].item()
-                    if best_gen_img is None or best_gen_img_pred < this_gen_img_pred :
-                        best_gen_img = gen_img_to_print[this_gen_img_pred_argmax].unsqueeze(0)
-                        best_gen_img_pred = this_gen_img_pred
-                    label_ce = torch.ones(logits_backdoor_model.shape[0]).long().to(device)
-                    if test_config["alpha"] > 0.0 :
-                        label_bce = torch.ones(d_out.shape[0]).unsqueeze(1).to(device)
-                    if label is None:
-                        label_ce *= test_config["target_class"].to(device)
-                        pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
-                    else :
-                        label_ce *= (label+b_modifier)
-                        pred_target_scalar = torch.mean(pred[:, label+b_modifier])
-                    logsumexp_scalar = torch.mean(torch.logsumexp(logits_backdoor_model, dim=1))
+                    if test_config["gamma"] > 0.0:
+                        if test_config["trained_backdoor_dataset"] == DATASET.CIFAR10.value:
+                            gen_img = torchvision.transforms.functional.resize(gen_img, 32)
+                        logits_backdoor_model = backdoor_model(gen_img/255)
+                        pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
+                        if label is None :
+                            label_ex = test_config["target_class"]
+                            label_ref_ex = test_config["reference_target_class"]
+                        else :
+                            label_ex = label + b_modifier
+                            label_ref_ex = label + r_modifier
+                        this_gen_img_pred_argmax = torch.argmax(pred[:, label_ex]).item()
+                        this_gen_img_pred = pred[this_gen_img_pred_argmax, label_ex].item()
+                        if best_gen_img is None or best_gen_img_pred < this_gen_img_pred :
+                            best_gen_img = gen_img_to_print[this_gen_img_pred_argmax].unsqueeze(0)
+                            best_gen_img_pred = this_gen_img_pred
+                        label_ce = torch.ones(logits_backdoor_model.shape[0]).long().to(device)
+                        if test_config["alpha"] > 0.0 :
+
+                        if label is None:
+                            label_ce *= test_config["target_class"].to(device)
+                            pred_target_scalar = torch.mean(pred[:, test_config["target_class"]])
+                        else :
+                            label_ce *= (label+b_modifier)
+                            pred_target_scalar = torch.mean(pred[:, label+b_modifier])
+                        logsumexp_scalar = torch.mean(torch.logsumexp(logits_backdoor_model, dim=1))
+                        Iden_Loss = criterion_ce(logits_backdoor_model, label_ce)
+                        if Total_Loss is None :
+                            Total_Loss = test_config["gamma"] * Iden_Loss
+                        else :
+                            Total_Loss += test_config["gamma"] * Iden_Loss
                     #(-test_config["alpha"] * pred_target_scalar -test_config["gamma"] * logsumexp_scalar).backward()
                     #(-pred_target_scalar).backward()
                     #Prior_Loss = torch.mean(torch.nn.functional.softplus(log_sum_exp(d_out))) - torch.mean(log_sum_exp(d_out))
-                    if test_config["alpha"] > 0.0 :
-                        Prior_Loss = criterion_bce(d_out, label_bce)
-                    Iden_Loss = criterion_ce(logits_backdoor_model, label_ce)
-                    if test_config["alpha"] > 0.0 >= test_config["gamma"]:
-                        Total_Loss = test_config["alpha"] * Prior_Loss
-                    elif test_config["alpha"] <= 0.0 < test_config["gamma"]:
-                        Total_Loss = test_config["gamma"] * Iden_Loss
-                    else :
-                        Total_Loss = test_config["alpha"] * Prior_Loss + test_config["gamma"] * Iden_Loss
-                    Total_Loss.backward()
+                    if Total_Loss is not None :
+                        Total_Loss.backward()
                     solver.step()
                     scheduler.step()
                     if it % 100 == 0:
