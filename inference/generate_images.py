@@ -406,7 +406,6 @@ def main(test_config):
                             best_gen_img = gen_img_to_print[this_gen_img_pred_argmax].unsqueeze(0)
                             best_gen_img_pred = this_gen_img_pred
                         label_ce = torch.ones(logits_backdoor_model.shape[0]).long().to(device)
-                        if test_config["alpha"] > 0.0 :
 
                         if label is None:
                             label_ce *= test_config["target_class"].to(device)
