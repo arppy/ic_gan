@@ -427,7 +427,12 @@ def main(test_config):
                     solver.step()
                     scheduler.step()
                     if it % 100 == 0:
-                        print(it, scheduler.get_last_lr()[0], best_gen_img_pred, this_gen_img_pred, best_gen_img_argmax_ref, logsumexp_scalar.item(), mu[0, 0].item(), log_var[0, 0].item(), all_feats)
+                        print(it, scheduler.get_last_lr()[0], end=" ")
+                        if test_config["gamma"] > 0.0:
+                            print(best_gen_img_pred, this_gen_img_pred, best_gen_img_argmax_ref, logsumexp_scalar.item(), end=" ")
+                        if test_config["alpha"] > 0.0:
+                            print(it, scheduler.get_last_lr()[0], d_out, end=" ")
+                        print(mu[0, 0].item(), log_var[0, 0].item(), all_feats)
     except KeyboardInterrupt:
         print("Interrupt at:", it)
         pass
