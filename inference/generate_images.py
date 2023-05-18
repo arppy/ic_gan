@@ -285,6 +285,7 @@ def main(test_config):
         all_feats = rand_feats
     num_batches = 1 + (all_feats.shape[0]) // test_config["batch_size"]
     if test_config["model_backdoor"] is not None :
+        pct_start = 0.1
         try:
             model_reference = rb.load_model(model_name=test_config["model_reference"],
                                         dataset=test_config["trained_dataset_reference_model"],
@@ -315,7 +316,7 @@ def main(test_config):
         scheduler = torch.optim.lr_scheduler.OneCycleLR(solver, max_lr=test_config["learning_rate"],
                                                         total_steps=None, epochs=test_config["iter_times"],
                                                         steps_per_epoch=num_batches,
-                                                        pct_start=0.0025, anneal_strategy='cos',
+                                                        pct_start=pct_start, anneal_strategy='cos',
                                                         cycle_momentum=False, div_factor=1.0,
                                                         final_div_factor=1000000000.0, three_phase=False, last_epoch=-1,
                                                         verbose=False)
@@ -391,7 +392,7 @@ def main(test_config):
                     #torch.nn.functional.interpolate(gen_img, 224, mode="bicubic")
                     if test_config["trained_backdoor_dataset"] == DATASET.CIFAR10.value:
                         gen_img = torchvision.transforms.functional.resize(gen_img, 32)
-                    if test_config["gamma"] > 0.0:
+                    if test_config["gamma"] > 0.0 and it >= pct_start*test_config["iter_times"] :
                         logits_backdoor_model = backdoor_model(gen_img/255)
                         pred = torch.nn.functional.softmax(logits_backdoor_model, dim=1)
                         if label is None :
