@@ -440,11 +440,11 @@ def main(test_config):
                     scheduler.step()
                     if it % 100 == 0:
                         print(it, scheduler.get_last_lr()[0], end=" ")
-                        if test_config["gamma"] > 0.0:
+                        if test_config["gamma"] > 0.0 and it >= pct_start*test_config["iter_times"] :
                             print(best_gen_img_pred, this_gen_img_pred, best_gen_img_argmax_ref, logsumexp_scalar.item(), end=" ")
                         if test_config["beta"] > 0.0 :
                             print(Ref_Loss)
-                        if test_config["alpha"] > 0.0:
+                        if test_config["alpha"] > 0.0 :
                             print(d_out, end=" ")
                         print(mu[0, 0].item(), log_var[0, 0].item(), all_feats)
     except KeyboardInterrupt:
