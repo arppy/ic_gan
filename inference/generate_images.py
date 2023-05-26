@@ -218,7 +218,7 @@ class ModelNormWrapper(torch.nn.Module):
 def get_backdoor_model(model_backdoor_backbone, trained_backdoor_dataset, root_path, model_backdoor, device):
     if model_backdoor_backbone == 'xcit_small_12_p16_224' :
         model_poisoned = timm.create_model('xcit_small_12_p16_224', num_classes=NUM_OF_CLASS[trained_backdoor_dataset]-1).to(device)
-    elif model_backdoor_backbone == "standard":
+    elif model_backdoor == "standard":
         model_poisoned = torchvision.models.resnet18(pretrained=True).to(device)
     else :
         if trained_backdoor_dataset in [DATASET.IMAGENET.value] :
@@ -227,7 +227,7 @@ def get_backdoor_model(model_backdoor_backbone, trained_backdoor_dataset, root_p
             model_poisoned = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=NUM_OF_CLASS[trained_backdoor_dataset]-1).to(device)
     model_poisoned = ModelNormWrapper(model_poisoned, means=MEAN[trained_backdoor_dataset],
                                       stds=STD[trained_backdoor_dataset], device=device)
-    if model_backdoor_backbone != "standard":
+    if model_backdoor != "standard":
         checkpoint = torch.load(os.path.join(root_path,model_backdoor), map_location=device)
         model_poisoned.load_state_dict(checkpoint)
     model_poisoned.eval()
