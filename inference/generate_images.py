@@ -303,7 +303,7 @@ def main(test_config):
             model_reference = rb.load_model(model_name=test_config["model_reference"],
                                         dataset=test_config["trained_dataset_reference_model"],
                                         threat_model="Linf").to(device)
-        except KeyError :
+        except (KeyError, ValueError) :
             model_reference = get_backdoor_model(test_config["model_reference_backbone"], test_config["trained_dataset_reference_model"],
                                                  test_config["root_path"], test_config["model_reference"], device=device)
         freeze(model_reference)
@@ -312,7 +312,7 @@ def main(test_config):
             backdoor_model = rb.load_model(model_name=test_config["model_backdoor"],
                                         dataset=test_config["trained_backdoor_dataset"],
                                         threat_model="Linf").to(device)
-        except KeyError :
+        except (KeyError, ValueError) :
             backdoor_model = get_backdoor_model(test_config["model_backdoor_backbone"], test_config["trained_backdoor_dataset"],
                                                 test_config["root_path"], test_config["model_backdoor"], device=device)
         freeze(backdoor_model)
