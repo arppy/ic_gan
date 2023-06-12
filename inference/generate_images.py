@@ -30,6 +30,7 @@ class DATASET(Enum) :
   CIFAR10 = 'cifar10'
   CIFAR100 = 'cifar100'
   SVHN = 'SVHN'
+  AFHQ = 'afhq'
   IMAGENET = 'imagenet'
   YTF = 'YTF'
 
@@ -51,6 +52,15 @@ MEAN[DATASET.IMAGENET.value] = [0.485, 0.456, 0.406]
 STD[DATASET.IMAGENET.value] = [0.229, 0.224, 0.225]
 NUM_OF_CLASS[DATASET.IMAGENET.value] = 1000
 SAMPLES_PER_EPOCH[DATASET.IMAGENET.value] = 1281167
+
+
+IMAGE_SHAPE[DATASET.AFHQ.value] = [224, 224]
+VAL_SIZE[DATASET.AFHQ.value] = 1000
+COLOR_CHANNEL[DATASET.AFHQ.value] = 3
+MEAN[DATASET.AFHQ.value] = [0.5, 0.5, 0.5]
+STD[DATASET.AFHQ.value] = [0.5, 0.5, 0.5]
+NUM_OF_CLASS[DATASET.AFHQ.value] = 3
+SAMPLES_PER_EPOCH[DATASET.AFHQ.value] = 14000
 
 
 #  of cifar10 dataset.
@@ -221,7 +231,7 @@ def get_backdoor_model(model_backdoor_backbone, trained_backdoor_dataset, root_p
     elif model_backdoor == "standard":
         model_poisoned = torchvision.models.resnet18(pretrained=True).to(device)
     else :
-        if trained_backdoor_dataset in [DATASET.IMAGENET.value] :
+        if trained_backdoor_dataset in [DATASET.IMAGENET.value, DATASET.AFHQ.value] :
             model_poisoned = torchvision.models.resnet18(num_classes=NUM_OF_CLASS[trained_backdoor_dataset]-1).to(device)
         else :
             model_poisoned = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=NUM_OF_CLASS[trained_backdoor_dataset]-1).to(device)
@@ -624,7 +634,7 @@ if __name__ == "__main__":
         "--trained_dataset_reference_model",
         type=str,
         default="imagenet",
-        choices=["imagenet", "coco", "cifar10"],
+        choices=["imagenet", "coco", "cifar10", DATASET.AFHQ.value],
         help="Dataset in which the reference model has been trained on.",
     )
     parser.add_argument(
@@ -651,7 +661,7 @@ if __name__ == "__main__":
         "--trained_backdoor_dataset",
         type=str,
         default="imagenet",
-        choices=["imagenet", "coco", "cifar10"],
+        choices=["imagenet", "coco", "cifar10", "afhq"],
         help="Dataset in which the backdoor model has been trained on.",
     )
     parser.add_argument(
